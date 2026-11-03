@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nextcloud Bookmarks settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="page-header">
+    <div class="brand">
+      <img src="icons/icon-48.png" alt="" width="36" height="36">
+      <div>
+        <h1>Nextcloud Bookmarks</h1>
+        <p>Unofficial Firefox client for the Nextcloud Bookmarks app.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Connection</h2>
+
+      <form id="settings-form" novalidate>
+        <label class="field">
+          <span>Server URL</span>
+          <input type="text" id="server-url" autocomplete="url" placeholder="https://cloud.example.com">
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Username</span>
+            <input type="text" id="username" autocomplete="username">
+          </label>
+          <label class="field">
+            <span>App password</span>
+            <input type="password" id="password" autocomplete="current-password">
+          </label>
+        </div>
+
+        <p class="hint">
+          Use a revocable Nextcloud app password (Settings → Security → App passwords),
+          especially with two-factor authentication. It is stored locally in Firefox.
+        </p>
+
+        <label class="field">
+          <span>Start with</span>
+          <select id="main-tab">
+            <option value="add">Bookmark form</option>
+            <option value="search">Search</option>
+          </select>
+        </label>
+
+        <div class="permission-box" id="permission-box" hidden>
+          <p id="permission-text"></p>
+          <button type="button" class="button" id="grant-host" hidden>Grant server access</button>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="button button-primary" id="save-settings">Save settings</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="import-card" hidden>
+      <h2>Import Firefox bookmarks</h2>
+      <p class="hint">
+        Manual one-way import into Nextcloud. Nothing is changed or deleted in Firefox.
+      </p>
+
+      <div id="import-permission">
+        <p class="hint" id="import-permission-text">
+          Allow Firefox bookmarks access to choose what to import.
+        </p>
+        <button type="button" class="button" id="grant-bookmarks">Allow bookmarks access</button>
+      </div>
+
+      <div id="import-controls" hidden>
+        <div class="field-row">
+          <label class="field">
+            <span>Firefox folder</span>
+            <select id="firefox-folder"></select>
+          </label>
+          <label class="field">
+            <span>Nextcloud folder</span>
+            <select id="import-folder">
+              <option value="-1">Root (no folder)</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="hint">
+          Existing URLs are skipped. Firefox folders are flattened into the selected
+          Nextcloud folder. This does not create Nextcloud folders.
+        </p>
+
+        <div class="actions">
+          <button type="button" class="button" id="preview-import">Preview</button>
+          <button type="button" class="button button-primary" id="start-import" disabled>Import</button>
+          <button type="button" class="button button-quiet" id="cancel-import" hidden>Cancel</button>
+        </div>
+
+        <progress id="import-progress" max="1" value="0" hidden></progress>
+        <div class="import-status" id="import-status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div class="notification" id="settings-notification" hidden aria-live="polite"></div>
+  </main>
+
+  <footer class="page-footer">
+    <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer">Source</a>
+    <span>·</span>
+    <a href="https://github.com/sponsors/tmiland" target="_blank" rel="noopener noreferrer">Sponsor</a>
+    <span class="footer-note">Unofficial. Not affiliated with Nextcloud.</span>
+  </footer>
+
+  <script type="module" src="src/options.mjs"></script>
+</body>
+</html>

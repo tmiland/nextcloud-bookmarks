@@ -1,0 +1,11 @@
+# Local-only notes
+AGENTS.md
+
+# Build and AMO state
+web-ext-artifacts/
+.amo-upload-uuid
+.web-extension-id
+*.xpi
+
+# Node
+node_modules/

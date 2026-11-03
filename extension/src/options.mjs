@@ -1,0 +1,504 @@
+import { NextcloudClient } from './api.mjs';
+import {
+  buildFolderTree,
+  formatError,
+  isSupportedUrl,
+  normalizeServerUrl,
+  normalizeUrlForCompare,
+  originPattern
+} from './utils.mjs';
+
+const api = globalThis.browser ?? globalThis.chrome;
+
+const state = {
+  settings: {},
+  client: null,
+  importPreview: null,
+  cancelled: false
+};
+
+const $ = (id) => document.getElementById(id);
+
+function setVisible(element, visible) {
+  if (element) {
+    element.hidden = !visible;
+  }
+}
+
+function setText(element, text) {
+  if (element) {
+    element.textContent = text ?? '';
+  }
+}
+
+async function init() {
+  bindEvents();
+  await loadSettings();
+  await refreshPermission();
+  await initImport();
+}
+
+function bindEvents() {
+  $('settings-form').addEventListener('submit', (event) => event.preventDefault());
+  $('save-settings').addEventListener('click', saveSettings);
+  $('grant-host').addEventListener('click', grantHostPermission);
+  $('grant-bookmarks').addEventListener('click', grantBookmarksPermission);
+  $('preview-import').addEventListener('click', previewImport);
+  $('start-import').addEventListener('click', startImport);
+  $('cancel-import').addEventListener('click', () => {
+    state.cancelled = true;
+    setImportStatus('Cancelling…');
+  });
+  $('firefox-folder').addEventListener('change', () => {
+    state.importPreview = null;
+    $('start-import').disabled = true;
+    setImportStatus('Choose a Firefox folder, preview, then import.');
+  });
+}
+
+async function loadSettings() {
+  try {
+    const result = await api.storage.local.get('settings');
+    state.settings = normalizeSettings(result.settings || {});
+  } catch {
+    state.settings = normalizeSettings({});
+  }
+
+  $('server-url').value = state.settings.serverUrl;
+  $('username').value = state.settings.username;
+  $('password').value = state.settings.password;
+  $('main-tab').value = state.settings.searchMainTab ? 'search' : 'add';
+
+  if (state.settings.serverUrl) {
+    try {
+      state.client = new NextcloudClient({
+        serverUrl: normalizeServerUrl(state.settings.serverUrl),
+        username: state.settings.username,
+        password: state.settings.password
+      });
+    } catch {
+      state.client = null;
+    }
+  }
+}
+
+function normalizeSettings(raw) {
+  return {
+    serverUrl: String(raw.serverUrl ?? ''),
+    username: String(raw.username ?? ''),
+    password: String(raw.password ?? ''),
+    searchMainTab: Boolean(raw.searchMainTab)
+  };
+}
+
+async function saveSettings() {
+  let serverUrl;
+  try {
+    serverUrl = normalizeServerUrl($('server-url').value);
+  } catch (error) {
+    notify(error.message, 'error');
+    return;
+  }
+
+  if (!serverUrl) {
+    notify('Enter your Nextcloud server URL.', 'error');
+    return;
+  }
+
+  let pattern;
+  try {
+    pattern = originPattern(serverUrl);
+  } catch {
+    notify('The server URL is not valid.', 'error');
+    return;
+  }
+
+  const permissionPromise = requestHostPermission(pattern);
+  const granted = await permissionPromise;
+
+  const settings = {
+    serverUrl,
+    username: $('username').value.trim(),
+    password: $('password').value,
+    searchMainTab: $('main-tab').value === 'search'
+  };
+
+  try {
+    await api.storage.local.set({ settings });
+  } catch {
+    notify('Could not save the settings.', 'error');
+    return;
+  }
+
+  state.settings = settings;
+  state.client = new NextcloudClient({
+    serverUrl,
+    username: settings.username,
+    password: settings.password
+  });
+
+  await refreshPermission();
+  await initImport();
+
+  if (granted) {
+    notify('Settings saved.', 'success');
+  } else {
+    notify('Settings saved, but server access was not granted.', 'error');
+  }
+}
+
+function requestHostPermission(pattern) {
+  return api.permissions.request({ origins: [pattern] }).catch(() => false);
+}
+
+async function refreshPermission() {
+  const box = $('permission-box');
+  const text = $('permission-text');
+  const button = $('grant-host');
+
+  if (!state.settings.serverUrl) {
+    setVisible(box, false);
+    return;
+  }
+
+  let serverUrl;
+  try {
+    serverUrl = normalizeServerUrl(state.settings.serverUrl);
+  } catch {
+    setVisible(box, false);
+    return;
+  }
+
+  let granted = false;
+  try {
+    granted = await api.permissions.contains({ origins: [originPattern(serverUrl)] });
+  } catch {
+    granted = false;
+  }
+
+  setVisible(box, true);
+  if (granted) {
+    setText(text, `Access to ${new URL(serverUrl).host} is granted.`);
+    setVisible(button, false);
+  } else {
+    setText(text, `This extension needs access to ${new URL(serverUrl).host} to read and save bookmarks.`);
+    setVisible(button, true);
+  }
+}
+
+async function grantHostPermission() {
+  if (!state.settings.serverUrl) {
+    notify('Save the server URL first.', 'error');
+    return;
+  }
+
+  let pattern;
+  try {
+    pattern = originPattern(normalizeServerUrl(state.settings.serverUrl));
+  } catch {
+    notify('The server URL is not valid.', 'error');
+    return;
+  }
+
+  const granted = await requestHostPermission(pattern);
+  await refreshPermission();
+  await initImport();
+
+  notify(granted ? 'Server access granted.' : 'Server access was not granted.', granted ? 'success' : 'error');
+}
+
+async function initImport() {
+  const card = $('import-card');
+  if (!state.settings.serverUrl || !state.client) {
+    setVisible(card, false);
+    return;
+  }
+
+  setVisible(card, true);
+
+  let hostGranted = false;
+  try {
+    hostGranted = await api.permissions.contains({
+      origins: [originPattern(normalizeServerUrl(state.settings.serverUrl))]
+    });
+  } catch {
+    hostGranted = false;
+  }
+
+  if (!hostGranted) {
+    setVisible($('import-permission'), false);
+    setVisible($('import-controls'), false);
+    setImportStatus('Save the settings and grant access to your Nextcloud server first.', 'error');
+    return;
+  }
+
+  let bookmarksGranted = false;
+  try {
+    bookmarksGranted = await api.permissions.contains({ permissions: ['bookmarks'] });
+  } catch {
+    bookmarksGranted = false;
+  }
+
+  if (!bookmarksGranted) {
+    setVisible($('import-permission'), true);
+    setVisible($('import-controls'), false);
+    setImportStatus('');
+    return;
+  }
+
+  setVisible($('import-permission'), false);
+  setVisible($('import-controls'), true);
+  await loadImportFolders();
+  setImportStatus('Choose a Firefox folder, preview, then import.');
+}
+
+async function grantBookmarksPermission() {
+  const granted = await api.permissions
+    .request({ permissions: ['bookmarks'] })
+    .catch(() => false);
+
+  if (!granted) {
+    setImportStatus('Firefox bookmarks access was not granted.', 'error');
+    return;
+  }
+
+  await initImport();
+}
+
+async function loadImportFolders() {
+  const importFolder = $('import-folder');
+  importFolder.replaceChildren(new Option('Root (no folder)', '-1'));
+
+  let hadError = false;
+
+  try {
+    const result = await state.client.getFolders();
+    const list = Array.isArray(result?.data) ? result.data : [];
+    const username = String(state.settings.username ?? '').toLowerCase();
+    const own = list.filter((folder) => {
+      if (!folder.userId || !username) {
+        return true;
+      }
+      return String(folder.userId).toLowerCase() === username;
+    });
+
+    for (const folder of buildFolderTree(own)) {
+      const indent = '\u00a0\u00a0'.repeat(folder.depth);
+      importFolder.append(new Option(`${indent}${folder.title}`, String(folder.id)));
+    }
+  } catch (error) {
+    hadError = true;
+    setImportStatus(`Could not load Nextcloud folders: ${formatError(error)}`, 'error');
+  }
+
+  try {
+    const tree = await api.bookmarks.getTree();
+    populateFirefoxFolders(tree);
+  } catch (error) {
+    hadError = true;
+    setImportStatus(`Could not read Firefox bookmarks: ${error.message}`, 'error');
+  }
+
+  if (!hadError) {
+    setImportStatus('Choose a Firefox folder, preview, then import.');
+  }
+}
+
+function populateFirefoxFolders(tree) {
+  const select = $('firefox-folder');
+  select.replaceChildren(new Option('All bookmarks', 'all'));
+
+  function walk(nodes, depth) {
+    for (const node of nodes) {
+      if (node.type !== 'folder') {
+        continue;
+      }
+
+      if (node.id !== 'root________') {
+        const indent = '\u00a0\u00a0'.repeat(depth);
+        select.append(new Option(`${indent}${node.title || '(untitled folder)'}`, node.id));
+      }
+
+      if (node.children) {
+        walk(node.children, node.id === 'root________' ? 0 : depth + 1);
+      }
+    }
+  }
+
+  walk(tree, 0);
+
+  const toolbar = Array.from(select.options).find((option) => option.value === 'toolbar_____');
+  select.value = toolbar ? 'toolbar_____' : 'all';
+}
+
+async function collectFirefoxBookmarks(folderId) {
+  const tree = folderId === 'all'
+    ? await api.bookmarks.getTree()
+    : await api.bookmarks.getSubTree(folderId);
+
+  const nodes = Array.isArray(tree) ? tree : [tree];
+  const items = [];
+  let skipped = 0;
+
+  function walk(children) {
+    for (const node of children) {
+      if (node.type === 'bookmark' && node.url) {
+        if (isSupportedUrl(node.url)) {
+          items.push({ url: node.url, title: node.title || node.url });
+        } else {
+          skipped++;
+        }
+      }
+      if (node.children) {
+        walk(node.children);
+      }
+    }
+  }
+
+  walk(nodes);
+  return { items, skipped };
+}
+
+async function previewImport() {
+  if (!state.client) {
+    setImportStatus('Save the settings first.', 'error');
+    return;
+  }
+
+  try {
+    const folderId = $('firefox-folder').value;
+    const collected = await collectFirefoxBookmarks(folderId);
+    const existing = await state.client.getExistingUrlSet();
+
+    const newItems = [];
+    let duplicates = 0;
+    for (const item of collected.items) {
+      if (existing.has(normalizeUrlForCompare(item.url))) {
+        duplicates++;
+      } else {
+        newItems.push(item);
+      }
+    }
+
+    state.importPreview = { items: newItems };
+    $('start-import').disabled = newItems.length === 0;
+
+    const total = newItems.length + duplicates + collected.skipped;
+    setImportStatus(
+      `Found ${total} bookmarks: ${newItems.length} new, ${duplicates} already in Nextcloud, ${collected.skipped} unsupported.`,
+      newItems.length ? '' : 'error'
+    );
+  } catch (error) {
+    state.importPreview = null;
+    $('start-import').disabled = true;
+    setImportStatus(`Preview failed: ${formatError(error)}`, 'error');
+  }
+}
+
+async function startImport() {
+  if (!state.client || !state.importPreview?.items.length) {
+    return;
+  }
+
+  const items = state.importPreview.items;
+  const folderValue = $('import-folder').value;
+  const folders = folderValue === '-1' ? [] : [Number(folderValue)];
+  const progress = $('import-progress');
+  const startButton = $('start-import');
+  const previewButton = $('preview-import');
+  const cancelButton = $('cancel-import');
+  const firefoxSelect = $('firefox-folder');
+  const importSelect = $('import-folder');
+
+  let created = 0;
+  let skipped = 0;
+  let failed = 0;
+  const errors = [];
+
+  state.cancelled = false;
+  startButton.disabled = true;
+  previewButton.disabled = true;
+  cancelButton.hidden = false;
+  firefoxSelect.disabled = true;
+  importSelect.disabled = true;
+  progress.hidden = false;
+  progress.max = items.length;
+  progress.value = 0;
+
+  for (let index = 0; index < items.length; index++) {
+    if (state.cancelled) {
+      break;
+    }
+
+    try {
+      await state.client.createBookmark({
+        url: items[index].url,
+        title: items[index].title,
+        description: '',
+        tags: [],
+        folders
+      });
+      created++;
+    } catch (error) {
+      const detail = error.data?.data ?? error.data?.message;
+      const text = Array.isArray(detail) ? detail.join(' ') : String(detail ?? '');
+      if (/already exists|exists/i.test(text)) {
+        skipped++;
+      } else {
+        failed++;
+        if (errors.length < 3) {
+          errors.push(formatError(error));
+        }
+      }
+    }
+
+    progress.value = index + 1;
+    setImportStatus(`Importing ${index + 1} of ${items.length}…`);
+    await new Promise((resolve) => window.setTimeout(resolve, 75));
+  }
+
+  cancelButton.hidden = true;
+  previewButton.disabled = false;
+  startButton.disabled = true;
+  firefoxSelect.disabled = false;
+  importSelect.disabled = false;
+  state.importPreview = null;
+
+  let summary = `${state.cancelled ? 'Import cancelled. ' : ''}Imported ${created}, skipped ${skipped}, failed ${failed}.`;
+  if (errors.length) {
+    summary += ` ${errors.join(' ')}`;
+  }
+
+  setImportStatus(summary, failed ? 'error' : 'success');
+}
+
+function setImportStatus(message, type = '') {
+  const status = $('import-status');
+  status.textContent = message ?? '';
+  status.className = 'import-status';
+  if (type) {
+    status.classList.add(`is-${type}`);
+  }
+}
+
+function notify(message, type = 'info') {
+  const box = $('settings-notification');
+  box.textContent = message ?? '';
+  box.className = 'notification';
+  if (type === 'error') {
+    box.classList.add('is-error');
+  }
+  if (type === 'success') {
+    box.classList.add('is-success');
+  }
+  box.hidden = false;
+
+  window.clearTimeout(notify.timer);
+  notify.timer = window.setTimeout(() => {
+    box.hidden = true;
+  }, 5000);
+}
+
+init().catch((error) => {
+  notify(formatError(error), 'error');
+});

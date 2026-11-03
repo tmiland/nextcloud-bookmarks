@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nextcloud Bookmarks</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon-32.png" alt="" width="24" height="24">
+      <div>
+        <h1>Nextcloud Bookmarks</h1>
+        <p class="brand-subtitle">Unofficial Firefox client</p>
+      </div>
+    </div>
+    <button type="button" class="icon-button" id="open-options" title="Settings" aria-label="Settings">
+      <span aria-hidden="true">⚙</span>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Bookmark views">
+    <button type="button" class="tab is-active" id="tab-add" data-tab="add" role="tab" aria-selected="true">Bookmark</button>
+    <button type="button" class="tab" id="tab-search" data-tab="search" role="tab" aria-selected="false">Search</button>
+    <button type="button" class="tab" id="tab-daily" data-tab="daily" role="tab" aria-selected="false">Daily</button>
+  </nav>
+
+  <main>
+    <section class="panel" id="panel-add" role="tabpanel" aria-labelledby="tab-add">
+      <div class="status" id="bookmark-status" hidden></div>
+
+      <form id="bookmark-form" novalidate>
+        <input type="hidden" id="bookmark-id">
+        <input type="hidden" id="bookmark-url">
+
+        <label class="field">
+          <span>Title</span>
+          <input type="text" id="bookmark-title" autocomplete="off">
+        </label>
+
+        <label class="field">
+          <span>Folder</span>
+          <select id="bookmark-folder">
+            <option value="-1">Root (no folder)</option>
+          </select>
+        </label>
+        <p class="field-note" id="folder-note" hidden></p>
+
+        <div class="tag-wrap">
+          <label class="field">
+            <span>Tags</span>
+            <input type="text" id="bookmark-tags" autocomplete="off" placeholder="tag1, tag2">
+          </label>
+          <ul class="tag-suggestions" id="tag-suggestions" hidden></ul>
+        </div>
+
+        <label class="field">
+          <span>Note</span>
+          <textarea id="bookmark-description" rows="3"></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="button button-primary" id="save-bookmark">Save</button>
+          <button type="button" class="button button-danger" id="delete-bookmark" hidden>Delete</button>
+        </div>
+      </form>
+
+    </section>
+
+    <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
+      <div class="field-row">
+        <label class="field">
+          <span>Terms</span>
+          <input type="text" id="search-terms" autocomplete="off" placeholder="term1, term2">
+        </label>
+        <label class="field">
+          <span>Tags</span>
+          <input type="text" id="search-tags" autocomplete="off" placeholder="tag1, tag2">
+        </label>
+      </div>
+
+      <div class="search-options">
+        <label class="inline-field">
+          <span>Match</span>
+          <select id="search-conjunction">
+            <option value="and">all</option>
+            <option value="or">any</option>
+          </select>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="search-no-paging">
+          <span>All results</span>
+        </label>
+        <button type="button" class="button button-primary" id="search-button">Search</button>
+      </div>
+
+      <div class="results" id="search-results"></div>
+    </section>
+
+    <section class="panel" id="panel-daily" role="tabpanel" aria-labelledby="tab-daily" hidden>
+      <p class="panel-hint">Bookmarks tagged <code>daily</code> appear here.</p>
+      <div class="results" id="daily-results"></div>
+    </section>
+  </main>
+
+  <div class="confirm" id="confirm-delete" hidden>
+    <span>Delete this bookmark?</span>
+    <div class="confirm-actions">
+      <button type="button" class="button button-danger button-small" id="confirm-delete-yes">Delete</button>
+      <button type="button" class="button button-quiet button-small" id="confirm-delete-no">Cancel</button>
+    </div>
+  </div>
+
+  <div class="notification" id="notification" hidden aria-live="polite"></div>
+
+  <footer class="app-footer">
+    <a href="#" id="open-bookmarks" class="text-link">My bookmarks</a>
+    <span class="footer-separator">·</span>
+    <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer" class="text-link">Source</a>
+  </footer>
+
+  <script type="module" src="src/popup.mjs"></script>
+</body>
+</html>
