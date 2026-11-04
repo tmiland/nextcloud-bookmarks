@@ -3,6 +3,7 @@ import { createFolder, fetchFolders, renameFolder } from './folders.mjs';
 import {
   clearImportJob,
   countMissingFolders,
+  dedupeImportItems,
   ensureImportFolders,
   loadImportJob,
   planImport,
@@ -21,8 +22,7 @@ import {
 } from './settings.mjs';
 import {
   buildFolderTree,
-  formatError,
-  normalizeUrlForCompare
+  formatError
 } from './utils.mjs';
 
 const api = globalThis.browser ?? globalThis.chrome;
@@ -36,7 +36,9 @@ const state = {
   folders: [],
   allFolders: [],
   renamingFolderId: null,
-  importJob: null
+  importJob: null,
+  importRunning: false,
+  foldersLoaded: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -86,13 +88,15 @@ function bindEvents() {
   $('resume-import').addEventListener('click', resumeImportJob);
   $('discard-import').addEventListener('click', discardImportJob);
   $('firefox-folder').addEventListener('change', () => {
-    state.importPreview = null;
-    $('start-import').disabled = true;
+    invalidateImportPreview();
     setImportStatus(t('chooseFirefoxFolder'));
   });
   $('import-recreate-folders').addEventListener('change', () => {
-    state.importPreview = null;
-    $('start-import').disabled = true;
+    invalidateImportPreview();
+    setImportStatus(t('chooseFirefoxFolder'));
+  });
+  $('import-folder').addEventListener('change', () => {
+    invalidateImportPreview();
     setImportStatus(t('chooseFirefoxFolder'));
   });
 }
@@ -407,6 +411,14 @@ async function createFolderFromOptions() {
   }
 }
 
+function invalidateImportPreview() {
+  state.importPreview = null;
+  const start = $('start-import');
+  if (start) {
+    start.disabled = true;
+  }
+}
+
 async function initImport() {
   const card = $('import-card');
   if (!state.settings.serverUrl || !state.client) {
@@ -443,7 +455,9 @@ async function initImport() {
   setVisible($('import-controls'), true);
   await loadImportFolders();
   await refreshImportJob();
-  setImportStatus(t('chooseFirefoxFolder'));
+  if (state.foldersLoaded) {
+    setImportStatus(t('chooseFirefoxFolder'));
+  }
 }
 
 async function grantBookmarksPermission() {
@@ -462,6 +476,8 @@ async function grantBookmarksPermission() {
 async function loadImportFolders() {
   const importFolder = $('import-folder');
   importFolder.replaceChildren(new Option(t('rootNoFolder'), '-1'));
+  state.foldersLoaded = false;
+  invalidateImportPreview();
 
   let hadError = false;
 
@@ -487,6 +503,7 @@ async function loadImportFolders() {
   }
 
   if (!hadError) {
+    state.foldersLoaded = true;
     setImportStatus(t('chooseFirefoxFolder'));
   }
 }
@@ -547,7 +564,7 @@ function renderImportJob(job) {
     return;
   }
 
-  if (!job || !Array.isArray(job.items)) {
+  if (state.importRunning || !job || !Array.isArray(job.items)) {
     setVisible(box, false);
     return;
   }
@@ -569,6 +586,11 @@ async function previewImport() {
     return;
   }
 
+  if (!state.foldersLoaded) {
+    setImportStatus(t('foldersUnavailable'), 'error');
+    return;
+  }
+
   try {
     const folderId = $('firefox-folder').value;
     const destinationId = Number($('import-folder').value);
@@ -583,15 +605,9 @@ async function previewImport() {
     });
     const existing = await state.client.getExistingUrlSet();
 
-    const newItems = [];
-    let duplicates = 0;
-    for (const item of plan.items) {
-      if (existing.has(normalizeUrlForCompare(item.url))) {
-        duplicates++;
-      } else {
-        newItems.push(item);
-      }
-    }
+    const deduped = dedupeImportItems(plan.items, existing);
+    const newItems = deduped.items;
+    const duplicates = deduped.duplicates;
 
     const missingFolders = recreateFolders
       ? countMissingFolders(state.folders, plan.folderPlans, destinationId)
@@ -620,16 +636,40 @@ async function previewImport() {
 }
 
 function setImportBusy(busy) {
+  state.importRunning = busy;
   $('start-import').disabled = busy || !state.importPreview?.items.length;
   $('preview-import').disabled = busy;
   $('cancel-import').hidden = !busy;
+  $('resume-import').disabled = busy;
+  $('discard-import').disabled = busy;
   $('firefox-folder').disabled = busy;
   $('import-folder').disabled = busy;
   $('import-recreate-folders').disabled = busy;
+  if (busy) {
+    setVisible($('import-job'), false);
+  }
 }
 
 async function startImport() {
+  if (state.importRunning) {
+    return;
+  }
+  if (state.importJob) {
+    setImportStatus(t('importJobExists'), 'error');
+    return;
+  }
   if (!state.client || !state.importPreview?.items.length) {
+    return;
+  }
+  if (!state.foldersLoaded) {
+    setImportStatus(t('foldersUnavailable'), 'error');
+    return;
+  }
+
+  const destinationId = Number($('import-folder').value);
+  if (destinationId !== state.importPreview.destinationId) {
+    invalidateImportPreview();
+    setImportStatus(t('previewStale'), 'error');
     return;
   }
 
@@ -681,6 +721,9 @@ async function runImportJob(job) {
   } catch (error) {
     setImportStatus(formatError(error, t), 'error');
     setImportBusy(false);
+    if (state.importJob) {
+      renderImportJob(state.importJob);
+    }
     return;
   }
 
@@ -713,7 +756,7 @@ async function runImportJob(job) {
 
   if (result.remaining === 0) {
     try {
-      await clearImportJob(api);
+      await clearImportJob(api, importAccount());
     } catch {
       // A stale completed job is harmless.
     }
@@ -730,6 +773,9 @@ async function runImportJob(job) {
   }
 
   setImportBusy(false);
+  if (state.importJob) {
+    renderImportJob(state.importJob);
+  }
 
   let summary = `${result.cancelled ? t('importCancelled') : ''}${t('importSummary', [result.created, result.skipped, result.failed])}`;
   if (job.createdFolders) {
@@ -746,7 +792,7 @@ async function runImportJob(job) {
 }
 
 async function resumeImportJob() {
-  if (!state.importJob) {
+  if (state.importRunning || !state.importJob) {
     return;
   }
   setImportStatus(t('importResumed'));
@@ -754,7 +800,10 @@ async function resumeImportJob() {
 }
 
 async function discardImportJob() {
-  await clearImportJob(api);
+  if (state.importRunning) {
+    return;
+  }
+  await clearImportJob(api, importAccount());
   state.importJob = null;
   renderImportJob(null);
   setImportStatus(t('importJobDiscarded'));

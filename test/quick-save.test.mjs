@@ -28,7 +28,7 @@ test('quickSavePlan rejects missing credentials', () => {
   }
 });
 
-test('quickSavePlan strips the trailing slash and keeps the tab title', () => {
+test('quickSavePlan canonicalizes the URL and keeps the tab title', () => {
   assert.deepEqual(
     quickSavePlan({
       tab: { url: 'https://example.com/path/', title: ' Example ' },
@@ -36,7 +36,7 @@ test('quickSavePlan strips the trailing slash and keeps the tab title', () => {
       lastFolder: 12
     }),
     {
-      url: 'https://example.com/path',
+      url: 'https://example.com/path/',
       title: 'Example',
       folders: [12]
     }

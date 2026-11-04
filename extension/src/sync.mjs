@@ -11,12 +11,21 @@ export async function syncBookmarks({
     return { synced: false, count: meta.count ?? 0, syncedAt: meta.syncedAt };
   }
 
+  const epoch = await store.writeEpoch(account);
   const result = await client.getAllBookmarks();
   if (result?.status !== 'success' || !Array.isArray(result.data)) {
     throw new Error('Could not sync bookmarks.');
   }
 
-  await store.replaceAll(account, result.data, now);
+  const replaced = await store.replaceAll(account, result.data, now, { expectedEpoch: epoch });
+  if (replaced === false) {
+    return {
+      synced: false,
+      skipped: true,
+      count: meta?.count ?? 0,
+      syncedAt: meta?.syncedAt ?? 0
+    };
+  }
   return { synced: true, count: result.data.length, syncedAt: now };
 }
 

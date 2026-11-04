@@ -82,6 +82,7 @@ async function loadPopup({
   index = null,
   indexSyncedAt = Date.now(),
   fetchOverride = null,
+  permissionsGranted = true,
   lastFolder = 10,
   currentTab = { url: 'https://example.com/', title: 'Example Domain' }
 } = {}) {
@@ -128,10 +129,10 @@ async function loadPopup({
     },
     permissions: {
       async contains() {
-        return true;
+        return permissionsGranted;
       },
       async request() {
-        return true;
+        return permissionsGranted;
       }
     },
     runtime: {
@@ -363,7 +364,7 @@ test('preserves shared and unknown folder IDs when editing a bookmark', async ()
     title: 'Multi folder',
     description: '',
     tags: ['multi'],
-    folders: [10, 99],
+    folders: [10, 13, 99],
     lastmodified: 1700000000,
     clickcount: 0,
     available: true
@@ -381,7 +382,7 @@ test('preserves shared and unknown folder IDs when editing a bookmark', async ()
       if (url.includes('/bookmark/5') && options?.method === 'PUT') {
         return new Response(JSON.stringify({
           status: 'success',
-          item: { ...bookmark, title: 'Multi folder updated', folders: [99] }
+          item: { ...bookmark, title: 'Multi folder updated', folders: [13, 99] }
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       return undefined;
@@ -397,8 +398,10 @@ test('preserves shared and unknown folder IDs when editing a bookmark', async ()
     await waitFor(() => document.getElementById('bookmark-id').value === '5');
 
     const work = document.querySelector('#folder-options input[value="10"]');
+    const shared = document.querySelector('#folder-options input[value="13"]');
     const unknown = document.querySelector('#folder-options input[value="99"]');
     assert.equal(work.checked, true);
+    assert.equal(shared.checked, true);
     assert.equal(unknown.checked, true);
 
     work.checked = false;
@@ -408,7 +411,7 @@ test('preserves shared and unknown folder IDs when editing a bookmark', async ()
     await waitFor(() => calls.some((call) => call.url.includes('/bookmark/5') && call.options?.method === 'PUT'));
     const put = calls.find((call) => call.url.includes('/bookmark/5') && call.options?.method === 'PUT');
     const body = new URLSearchParams(put.options.body);
-    assert.deepEqual(body.getAll('folders[]'), ['99']);
+    assert.deepEqual(body.getAll('folders[]'), ['13', '99']);
     assert.equal(body.getAll('folders[]').includes('10'), false);
     await new Promise((resolve) => setTimeout(resolve, 200));
   } finally {
@@ -452,6 +455,135 @@ test('creates a folder from the popup and selects it', async () => {
     assert.equal(body.get('title'), 'New Folder');
     assert.equal(body.get('parent_folder'), '10');
     await new Promise((resolve) => setTimeout(resolve, 200));
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('shows the current page before a slow bookmark lookup resolves', async () => {
+  const popup = await loadPopup({
+    fetchOverride(url) {
+      if (url.includes('/bookmark') && url.includes('url=')) {
+        return new Promise(() => {});
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.getElementById('bookmark-url').value === 'https://example.com/');
+    assert.equal(document.getElementById('bookmark-title').value, 'Example Domain');
+    assert.equal(document.getElementById('save-bookmark').textContent, 'Save');
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('does not hide an authentication error behind cached search results', async () => {
+  const popup = await loadPopup({
+    index: [{
+      id: 1,
+      url: 'https://cached.example/',
+      title: 'Cached example',
+      description: '',
+      tags: ['cached'],
+      folders: [-1],
+      lastmodified: 1,
+      clickcount: 0,
+      available: true
+    }],
+    indexSyncedAt: Date.now() - 10 * 60 * 1000,
+    fetchOverride(url) {
+      if (url.includes('/bookmark')) {
+        return new Response(JSON.stringify({ status: 'error', message: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.body.dataset.indexReady === '1');
+    document.getElementById('search-button').click();
+    await waitFor(() => document.getElementById('search-results').textContent.includes('Authentication failed'));
+    assert.equal(document.getElementById('search-results').textContent.includes('Cached example'), false);
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('does not render another account cache when the account changes', async () => {
+  const accountABookmark = {
+    id: 77,
+    url: 'https://account-a.example/',
+    title: 'Account A only',
+    description: '',
+    tags: [],
+    folders: [-1],
+    lastmodified: 1,
+    clickcount: 0,
+    available: true
+  };
+
+  const first = await loadPopup({ index: [accountABookmark] });
+  try {
+    await waitFor(() => first.dom.window.document.body.dataset.indexReady === '1');
+  } finally {
+    first.cleanup();
+  }
+
+  const second = await loadPopup({
+    settings: settingsFor(base.replace('127.0.0.1', 'localhost')),
+    fetchOverride(url) {
+      if (url.includes('/bookmark') && !url.includes('url=')) {
+        return Promise.reject(new Error('offline'));
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = second.dom.window.document;
+    document.getElementById('search-button').click();
+    await waitFor(() => document.getElementById('search-results').textContent.includes('Could not reach'));
+    assert.equal(document.getElementById('search-results').textContent.includes('Account A only'), false);
+  } finally {
+    second.cleanup();
+  }
+});
+
+test('applies the last-used folder after the first folder refresh', async () => {
+  const popup = await loadPopup({
+    lastFolder: 10,
+    currentTab: { url: 'https://unsaved.example/', title: 'Unsaved' },
+    fetchOverride(url) {
+      if (url.includes('/folder')) {
+        return new Promise((resolve) => setTimeout(() => resolve(undefined), 80));
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.querySelector('#folder-options input[value="10"]')?.checked === true);
+    assert.match(document.getElementById('folder-summary').textContent, /Work/);
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('shows the current page and a clear error when host permission is denied', async () => {
+  const popup = await loadPopup({ permissionsGranted: false });
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.getElementById('notification').textContent.includes('Access to your Nextcloud server'));
+    assert.equal(document.getElementById('bookmark-url').value, 'https://example.com/');
+    assert.equal(document.getElementById('bookmark-title').value, 'Example Domain');
   } finally {
     popup.cleanup();
   }

@@ -48,7 +48,7 @@ test('findByUrl sends the url and limit parameters', async () => {
   assert.match(calls[0].options.headers.Authorization, /^Basic /);
 });
 
-test('findCurrentBookmark retries without a trailing slash', async () => {
+test('findCurrentBookmark retries without a fragment', async () => {
   let count = 0;
   globalThis.fetch = async () => {
     count++;
@@ -57,9 +57,35 @@ test('findCurrentBookmark retries without a trailing slash', async () => {
       : jsonResponse({ status: 'success', data: [{ id: 9 }] });
   };
 
-  const bookmark = await client().findCurrentBookmark('https://example.com/');
+  const bookmark = await client().findCurrentBookmark('https://example.com/#section');
   assert.equal(bookmark.id, 9);
   assert.equal(count, 2);
+});
+
+test('findCurrentBookmark retries without tracking parameters', async () => {
+  let count = 0;
+  globalThis.fetch = async () => {
+    count++;
+    return count === 1
+      ? jsonResponse({ status: 'success', data: [] })
+      : jsonResponse({ status: 'success', data: [{ id: 10 }] });
+  };
+
+  const bookmark = await client().findCurrentBookmark('https://example.com/?utm_source=newsletter');
+  assert.equal(bookmark.id, 10);
+  assert.equal(count, 2);
+});
+
+test('findCurrentBookmark keeps meaningful query parameters', async () => {
+  let count = 0;
+  globalThis.fetch = async () => {
+    count++;
+    return jsonResponse({ status: 'success', data: [] });
+  };
+
+  const bookmark = await client().findCurrentBookmark('https://example.com/?page=2');
+  assert.equal(bookmark, null);
+  assert.equal(count, 1);
 });
 
 test('createBookmark sends top-level tags[] and folders[]', async () => {
@@ -147,7 +173,7 @@ test('getExistingUrlSet normalizes URLs', async () => {
   }));
 
   const urls = await client().getExistingUrlSet();
-  assert.equal(urls.has('https://example.com'), true);
+  assert.equal(urls.has('https://example.com/'), true);
   assert.equal(urls.has('https://example.com/path'), true);
 });
 

@@ -37,7 +37,7 @@ function matchesFilter(bookmark, filter) {
     return bookmark.available === false;
   }
   if (filter === 'duplicated') {
-    return (bookmark.folders || []).filter((id) => id !== -1).length > 1;
+    return (bookmark.folders || []).length > 1;
   }
   return true;
 }

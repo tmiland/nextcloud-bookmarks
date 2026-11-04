@@ -95,7 +95,12 @@ function asNumber(value, fallback = NaN) {
 }
 
 function normalized(value) {
-  return String(value ?? '').trim().replace(/\/+$/, '');
+  const raw = String(value ?? '').trim();
+  try {
+    return new URL(raw).href;
+  } catch {
+    return raw;
+  }
 }
 
 function matchesTerm(bookmark, term) {
@@ -133,7 +138,7 @@ function filterBookmarks(bookmarks, url) {
   }
 
   if (duplicated !== null) {
-    data = data.filter((bookmark) => (bookmark.folders || []).filter((id) => id !== -1).length > 1);
+    data = data.filter((bookmark) => (bookmark.folders || []).length > 1);
   }
 
   if (untagged !== null) {
@@ -293,13 +298,25 @@ export function createMockServer({ port = DEFAULT_PORT } = {}) {
     if (url.pathname === bookmarkPath && req.method === 'POST') {
       const params = new URLSearchParams(body);
       const bookmarkUrl = params.get('url') || '';
-      if (state.bookmarks.some((bookmark) => normalized(bookmark.url) === normalized(bookmarkUrl))) {
-        send(res, 400, { status: 'error', data: 'Bookmark already exists' });
+      const existing = state.bookmarks.find(
+        (bookmark) => normalized(bookmark.url) === normalized(bookmarkUrl)
+      );
+      if (existing) {
+        const title = params.get('title') || '';
+        const description = params.get('description') || '';
+        const tags = params.getAll('tags[]');
+        const folders = params.getAll('folders[]').map(Number).filter(Number.isFinite);
+        if (title) existing.title = title;
+        if (description) existing.description = description;
+        existing.tags = [...new Set([...(existing.tags || []), ...tags])];
+        existing.folders = [...new Set([...(existing.folders || []), ...folders])];
+        existing.lastmodified = Math.floor(Date.now() / 1000);
+        send(res, 200, { status: 'success', item: existing });
         return;
       }
       const bookmark = {
         id: state.nextBookmarkId++,
-        url: bookmarkUrl,
+        url: normalized(bookmarkUrl),
         title: params.get('title') || '',
         description: params.get('description') || '',
         tags: params.getAll('tags[]'),

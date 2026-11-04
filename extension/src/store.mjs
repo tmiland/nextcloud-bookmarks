@@ -1,5 +1,27 @@
 const DEFAULT_DB = 'nextcloud-bookmarks';
 const DEFAULT_VERSION = 1;
+const INDEX_FIELDS = [
+  'id',
+  'url',
+  'title',
+  'description',
+  'tags',
+  'folders',
+  'lastmodified',
+  'added',
+  'clickcount',
+  'available'
+];
+
+export function projectBookmark(bookmark) {
+  const projected = {};
+  for (const field of INDEX_FIELDS) {
+    if (bookmark?.[field] !== undefined) {
+      projected[field] = bookmark[field];
+    }
+  }
+  return projected;
+}
 
 function transactionDone(transaction) {
   return new Promise((resolve, reject) => {
@@ -11,6 +33,18 @@ function transactionDone(transaction) {
 
 function recordKey(account, id) {
   return `${account}:${id}`;
+}
+
+function epochKey(account) {
+  return `${account}:epoch`;
+}
+
+function bumpEpoch(store, account) {
+  const request = store.get(epochKey(account));
+  request.onsuccess = () => {
+    const current = Number(request.result?.value) || 0;
+    store.put({ key: epochKey(account), value: current + 1 });
+  };
 }
 
 export class BookmarkStore {
@@ -62,8 +96,14 @@ export class BookmarkStore {
     this.opening = null;
   }
 
-  async replaceAll(account, bookmarks, syncedAt = Date.now()) {
+  async replaceAll(account, bookmarks, syncedAt = Date.now(), { expectedEpoch = null } = {}) {
     const db = await this.open();
+    if (expectedEpoch !== null) {
+      const current = await this.writeEpoch(account);
+      if (current !== expectedEpoch) {
+        return false;
+      }
+    }
     const transaction = db.transaction(['bookmarks', 'meta'], 'readwrite');
     const store = transaction.objectStore('bookmarks');
     const meta = transaction.objectStore('meta');
@@ -85,7 +125,7 @@ export class BookmarkStore {
     });
 
     for (const bookmark of bookmarks || []) {
-      store.put({ ...bookmark, key: recordKey(account, bookmark.id), account });
+      store.put({ ...projectBookmark(bookmark), key: recordKey(account, bookmark.id), account });
     }
 
     meta.put({
@@ -96,13 +136,15 @@ export class BookmarkStore {
     });
 
     await done;
+    return true;
   }
 
   async upsert(account, bookmark) {
     const db = await this.open();
-    const transaction = db.transaction('bookmarks', 'readwrite');
+    const transaction = db.transaction(['bookmarks', 'meta'], 'readwrite');
+    bumpEpoch(transaction.objectStore('meta'), account);
     transaction.objectStore('bookmarks').put({
-      ...bookmark,
+      ...projectBookmark(bookmark),
       key: recordKey(account, bookmark.id),
       account
     });
@@ -111,9 +153,21 @@ export class BookmarkStore {
 
   async remove(account, id) {
     const db = await this.open();
-    const transaction = db.transaction('bookmarks', 'readwrite');
+    const transaction = db.transaction(['bookmarks', 'meta'], 'readwrite');
+    bumpEpoch(transaction.objectStore('meta'), account);
     transaction.objectStore('bookmarks').delete(recordKey(account, id));
     await transactionDone(transaction);
+  }
+
+  async writeEpoch(account) {
+    const db = await this.open();
+    const transaction = db.transaction('meta', 'readonly');
+    const request = transaction.objectStore('meta').get(epochKey(account));
+    const result = await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    return Number(result?.value) || 0;
   }
 
   async getAll(account) {
@@ -160,6 +214,7 @@ export class BookmarkStore {
     });
 
     transaction.objectStore('meta').delete(`${account}:meta`);
+    transaction.objectStore('meta').delete(epochKey(account));
     await done;
   }
 }

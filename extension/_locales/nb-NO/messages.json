@@ -559,5 +559,17 @@
   },
   "importFoldersCreated": {
     "message": "{{1}} mapper opprettet."
+  },
+  "importJobExists": {
+    "message": "Fortsett eller forkast den ventende importen før du starter en ny."
+  },
+  "previewStale": {
+    "message": "Målmappen er endret. Forhåndsvis på nytt."
+  },
+  "foldersUnavailable": {
+    "message": "Nextcloud-mappene kunne ikke lastes. Forhåndsvis på nytt før import."
+  },
+  "extensionDescription": {
+    "message": "Uoffisiell Firefox-klient for Nextcloud Bookmarks: lagre, søk, organiser og importer bokmerker."
   }
 }

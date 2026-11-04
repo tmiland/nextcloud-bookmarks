@@ -1,4 +1,4 @@
-import { buildClient, hasHostPermission, loadSettings } from './settings.mjs';
+import { accountKey, buildClient, hasHostPermission, loadSettings } from './settings.mjs';
 import { quickSavePlan } from './quick-save.mjs';
 import { t } from './i18n.mjs';
 import { formatError } from './utils.mjs';
@@ -45,10 +45,16 @@ function setBadge(text, color) {
   }, 4000);
 }
 
-async function readLastFolder() {
+async function readLastFolder(account) {
   try {
-    const result = await api.storage.local.get('lastFolder');
-    const folder = Number(result?.lastFolder);
+    const key = `lastFolder:${account}`;
+    const result = await api.storage.local.get(key);
+    const scoped = Number(result?.[key]);
+    if (Number.isFinite(scoped)) {
+      return scoped;
+    }
+    const legacy = await api.storage.local.get('lastFolder');
+    const folder = Number(legacy?.lastFolder);
     return Number.isFinite(folder) ? folder : -1;
   } catch {
     return -1;
@@ -68,31 +74,27 @@ async function notify(message) {
   }
 }
 
-async function updateIndex(bookmark) {
+async function updateIndex(bookmark, account) {
   try {
     const { BookmarkStore } = await import('./store.mjs');
-    const settings = await loadSettings(api);
-    const { accountKey } = await import('./settings.mjs');
     const store = new BookmarkStore();
-    await store.upsert(accountKey(settings.serverUrl, settings.username), bookmark);
+    await store.upsert(account, bookmark);
   } catch {
-    // The index arrives in a later task and is optional for quick save.
+    // Index updates are best effort.
   }
 }
 
-async function removeFromIndex(id) {
+async function removeFromIndex(id, account) {
   try {
     const { BookmarkStore } = await import('./store.mjs');
-    const settings = await loadSettings(api);
-    const { accountKey } = await import('./settings.mjs');
     const store = new BookmarkStore();
-    await store.remove(accountKey(settings.serverUrl, settings.username), id);
+    await store.remove(account, id);
   } catch {
     // Ignore index failures.
   }
 }
 
-function injectToast({ message, undoLabel, closeLabel, undoneMessage, failedMessage, bookmarkId }) {
+function injectToast({ message, undoLabel, closeLabel, undoneMessage, failedMessage, bookmarkId, account }) {
   const previous = document.getElementById('nextcloud-bookmarks-toast');
   if (previous) {
     previous.remove();
@@ -101,7 +103,7 @@ function injectToast({ message, undoLabel, closeLabel, undoneMessage, failedMess
   const host = document.createElement('div');
   host.id = 'nextcloud-bookmarks-toast';
   host.style.cssText = 'all: initial; position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;';
-  const shadow = host.attachShadow({ mode: 'open' });
+  const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = `
     .toast {
@@ -148,7 +150,7 @@ function injectToast({ message, undoLabel, closeLabel, undoneMessage, failedMess
   undo.addEventListener('click', async () => {
     undo.disabled = true;
     try {
-      const response = await browser.runtime.sendMessage({ type: 'undo-quick-save', id: bookmarkId });
+      const response = await browser.runtime.sendMessage({ type: 'undo-quick-save', id: bookmarkId, account });
       text.textContent = response?.ok ? undoneMessage : failedMessage;
       undo.remove();
       window.setTimeout(remove, 2500);
@@ -162,7 +164,7 @@ function injectToast({ message, undoLabel, closeLabel, undoneMessage, failedMess
   toast.append(text, undo, close);
   shadow.append(style, toast);
   document.documentElement.append(host);
-  window.setTimeout(remove, 8000);
+  window.setTimeout(remove, 6000);
 }
 
 async function showToast(tabId, payload) {
@@ -183,7 +185,8 @@ async function showToast(tabId, payload) {
 
 async function quickSaveForTab(tab) {
   const settings = await loadSettings(api);
-  const lastFolder = await readLastFolder();
+  const account = accountKey(settings.serverUrl, settings.username);
+  const lastFolder = await readLastFolder(account);
   const plan = quickSavePlan({ tab, settings, lastFolder });
 
   if (plan.error === 'unsupported') {
@@ -226,7 +229,7 @@ async function quickSaveForTab(tab) {
       throw new Error(t('quickSaveFailed'));
     }
 
-    await updateIndex(bookmark);
+    await updateIndex(bookmark, account);
     setBadge('✓', '#0060df');
 
     const payload = {
@@ -235,7 +238,8 @@ async function quickSaveForTab(tab) {
       closeLabel: t('close'),
       undoneMessage: t('quickSaveUndone'),
       failedMessage: t('quickSaveUndoFailed'),
-      bookmarkId: bookmark.id
+      bookmarkId: bookmark.id,
+      account
     };
     const toasted = await showToast(tab?.id, payload);
     if (!toasted) {
@@ -260,7 +264,7 @@ async function quickSaveActiveTab() {
   }
 }
 
-async function undoQuickSave(id) {
+async function undoQuickSave(id, account) {
   if (!id) {
     return { ok: false };
   }
@@ -268,10 +272,14 @@ async function undoQuickSave(id) {
   if (!settings.serverUrl) {
     return { ok: false };
   }
+  const currentAccount = accountKey(settings.serverUrl, settings.username);
+  if (account && currentAccount !== account) {
+    return { ok: false };
+  }
   try {
     const client = buildClient(settings);
     await client.deleteBookmark(id);
-    await removeFromIndex(id);
+    await removeFromIndex(id, currentAccount);
     return { ok: true };
   } catch {
     return { ok: false };
@@ -315,7 +323,7 @@ menus?.onClicked.addListener((info, tab) => {
 
 api.runtime.onMessage.addListener((message) => {
   if (message?.type === 'undo-quick-save') {
-    return undoQuickSave(message.id);
+    return undoQuickSave(message.id, message.account);
   }
   return false;
 });

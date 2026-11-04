@@ -3,7 +3,8 @@ import {
   basicAuthHeader,
   normalizeUrlForCompare,
   originPattern,
-  toParams
+  toParams,
+  urlCandidates
 } from './utils.mjs';
 
 export class NextcloudError extends Error {
@@ -56,6 +57,7 @@ export class NextcloudClient {
       response = await fetch(this.apiUrl(path, params), options);
     } catch (error) {
       const networkError = new Error('Could not reach the Nextcloud server');
+      networkError.code = 'errorNetwork';
       networkError.cause = error;
       throw networkError;
     }
@@ -136,17 +138,14 @@ export class NextcloudClient {
       return null;
     }
 
-    let bookmark = await this.findByUrl(url);
-    if (bookmark) {
-      return bookmark;
+    for (const candidate of urlCandidates(url)) {
+      const bookmark = await this.findByUrl(candidate);
+      if (bookmark) {
+        return bookmark;
+      }
     }
 
-    const alternate = url.endsWith('/') ? url.replace(/\/+$/, '') : `${url}/`;
-    if (alternate !== url) {
-      bookmark = await this.findByUrl(alternate);
-    }
-
-    return bookmark;
+    return null;
   }
 
   async createBookmark({ url, title, description, tags, folders }) {

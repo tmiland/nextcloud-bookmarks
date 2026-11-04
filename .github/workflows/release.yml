@@ -12,6 +12,9 @@ jobs:
   release:
     name: Build and release
     runs-on: ubuntu-latest
+    env:
+      WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+      WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,13 +24,19 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run lint
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest
+      - run: sudo apt-get update && sudo apt-get install -y zip curl
+      - run: python -m pip install -r test/integration/requirements.txt
+      - run: npm run test:integration
       - run: npm run build
 
       - name: Sign with AMO
-        if: ${{ secrets.WEB_EXT_API_KEY != '' && secrets.WEB_EXT_API_SECRET != '' }}
-        env:
-          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
-          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        if: env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != ''
         run: |
           npx web-ext sign \
             --source-dir extension \

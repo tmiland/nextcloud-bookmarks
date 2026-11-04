@@ -1,4 +1,4 @@
-import { buildFolderTree } from './utils.mjs';
+import { AppError, buildFolderTree } from './utils.mjs';
 
 function sameTitle(a, b) {
   return String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
@@ -18,7 +18,7 @@ export async function fetchFolders(client, username) {
 export async function createFolder(client, title, parentFolder = -1) {
   const result = await client.createFolder({ title, parent_folder: parentFolder });
   if (!result?.item?.id) {
-    throw new Error('The folder was not created.');
+    throw new AppError('folderCreateFailed');
   }
   return result.item;
 }
@@ -26,7 +26,7 @@ export async function createFolder(client, title, parentFolder = -1) {
 export async function renameFolder(client, id, title, parentFolder = -1) {
   const result = await client.updateFolder(id, { title, parent_folder: parentFolder });
   if (!result?.item?.id) {
-    throw new Error('The folder was not renamed.');
+    throw new AppError('folderRenameFailed');
   }
   return result.item;
 }

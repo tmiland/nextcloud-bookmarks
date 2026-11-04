@@ -1,5 +1,14 @@
 export const API_BASE = '/index.php/apps/bookmarks/public/rest/v2';
 
+export class AppError extends Error {
+  constructor(code, substitutions = []) {
+    super(code);
+    this.name = 'AppError';
+    this.code = code;
+    this.substitutions = substitutions;
+  }
+}
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 export function isLocalHost(hostname) {
@@ -128,12 +137,77 @@ export function buildFolderTree(folders) {
   return result;
 }
 
+const TRACKING_PARAM = /^(utm_.+|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|igshid)$/i;
+
+export function canonicalUrl(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    return new URL(raw).href;
+  } catch {
+    return raw;
+  }
+}
+
+export function urlCandidates(value) {
+  const raw = String(value ?? '').trim();
+  const candidates = [];
+  const add = (candidate) => {
+    const canonical = canonicalUrl(candidate);
+    if (canonical && !candidates.includes(canonical)) {
+      candidates.push(canonical);
+    }
+  };
+
+  if (!raw) {
+    return candidates;
+  }
+
+  add(raw);
+
+  try {
+    const url = new URL(raw);
+    url.hash = '';
+    add(url.href);
+
+    const toggled = new URL(url.href);
+    toggled.pathname = toggled.pathname.endsWith('/')
+      ? toggled.pathname.replace(/\/+$/, '') || '/'
+      : `${toggled.pathname}/`;
+    add(toggled.href);
+
+    const stripped = new URL(url.href);
+    let removed = false;
+    for (const key of [...stripped.searchParams.keys()]) {
+      if (TRACKING_PARAM.test(key)) {
+        stripped.searchParams.delete(key);
+        removed = true;
+      }
+    }
+    if (removed) {
+      add(stripped.href);
+    }
+  } catch {
+    // Keep the raw candidate for non-URL values.
+  }
+
+  return candidates;
+}
+
 export function normalizeUrlForCompare(value) {
   const raw = String(value ?? '').trim();
   try {
     const url = new URL(raw);
     url.hash = '';
-    return url.href.replace(/\/+$/, '');
+    for (const key of [...url.searchParams.keys()]) {
+      if (TRACKING_PARAM.test(key)) {
+        url.searchParams.delete(key);
+      }
+    }
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/';
+    return url.href;
   } catch {
     return raw.replace(/\/+$/, '');
   }
@@ -184,6 +258,10 @@ export function formatError(error, translate = (key, substitutions) => {
 }) {
   if (!error) {
     return translate('unknownError');
+  }
+
+  if (error.code) {
+    return translate(error.code, error.substitutions);
   }
 
   if (error.status === 401) {

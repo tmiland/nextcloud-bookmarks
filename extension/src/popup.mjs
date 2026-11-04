@@ -7,6 +7,7 @@ import { BookmarkStore } from './store.mjs';
 import { syncBookmarks, updateIndexAfterWrite } from './sync.mjs';
 import {
   buildFolderTree,
+  canonicalUrl,
   formatDate,
   formatError,
   isSupportedUrl,
@@ -44,7 +45,9 @@ const state = {
   searchPage: 0,
   searchHasMore: false,
   searchSource: 'server',
-  editingFromSearch: false
+  editingFromSearch: false,
+  formTouched: false,
+  folderSelectionInitialized: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -121,6 +124,7 @@ async function init() {
   }
 
   if (!(await hasHostPermission(api, state.serverUrl))) {
+    state.client = null;
     notify(t('accessRequired'), 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
@@ -129,6 +133,7 @@ async function init() {
   state.account = accountKey(state.serverUrl, state.settings.username);
   state.store = new BookmarkStore();
   state.lastFolderId = await loadLastFolder();
+  void loadIndex();
 
   const [foldersEntry, tagsEntry] = await Promise.all([
     readCache(api, cacheKey('folders', state.account)),
@@ -137,30 +142,39 @@ async function init() {
 
   if (foldersEntry) {
     applyFolders(foldersEntry.value);
-    void refreshFolders();
   } else {
-    await refreshFolders();
+    applyFolders([]);
   }
+  void refreshFolders();
 
   if (tagsEntry) {
     applyTags(tagsEntry.value);
-    void refreshTags();
   } else {
-    await refreshTags();
+    applyTags([]);
   }
+  void refreshTags();
 
-  await loadCurrentTab();
-  void loadIndex();
+  void loadCurrentTab();
 }
 
 function openOptions() {
   api.runtime.openOptionsPage();
 }
 
+function lastFolderKey() {
+  return `lastFolder:${state.account}`;
+}
+
 async function loadLastFolder() {
   try {
-    const result = await api.storage.local.get('lastFolder');
-    const id = Number(result.lastFolder);
+    const key = lastFolderKey();
+    const result = await api.storage.local.get(key);
+    const scoped = Number(result[key]);
+    if (Number.isFinite(scoped)) {
+      return scoped;
+    }
+    const legacy = await api.storage.local.get('lastFolder');
+    const id = Number(legacy.lastFolder);
     return Number.isFinite(id) ? id : -1;
   } catch {
     return -1;
@@ -179,6 +193,8 @@ function applyFolders(list) {
     } else {
       applyDefaultFolders();
     }
+  } else if (!state.folderSelectionInitialized && state.pickerFolders.length) {
+    applyDefaultFolders();
   } else {
     renderFolderPicker();
     updateFolderSummary();
@@ -245,6 +261,7 @@ function setSelectedFolders(ids) {
   const numeric = (Array.isArray(ids) ? ids : []).map(Number).filter(Number.isFinite);
   state.selectedFolderIds = new Set(numeric.length ? numeric : [-1]);
   state.originalFolderIds = new Set(state.selectedFolderIds);
+  state.folderSelectionInitialized = true;
   renderFolderPicker();
   updateFolderSummary();
   setFolderNote(folderNoteFromSelection());
@@ -252,11 +269,10 @@ function setSelectedFolders(ids) {
 
 function applyDefaultFolders() {
   const last = Number(state.lastFolderId);
-  const exists = state.pickerFolders.some((folder) =>
-    Number(folder.id) === last && !folder.shared
-  );
+  const exists = state.pickerFolders.some((folder) => Number(folder.id) === last);
   state.selectedFolderIds = new Set([exists && last !== -1 ? last : -1]);
   state.originalFolderIds = new Set(state.selectedFolderIds);
+  state.folderSelectionInitialized = state.pickerFolders.length > 0;
   renderFolderPicker();
   updateFolderSummary();
   setFolderNote('');
@@ -280,6 +296,8 @@ function renderFolderPicker() {
     input.value = String(id);
     input.checked = state.selectedFolderIds.has(Number(id));
     input.addEventListener('change', () => {
+      state.formTouched = true;
+      state.folderSelectionInitialized = true;
       if (input.checked) {
         state.selectedFolderIds.add(Number(id));
       } else {
@@ -416,7 +434,7 @@ async function refreshIndex(force = false) {
       force
     });
     state.indexedBookmarks = await state.store.getAll(state.account);
-    state.indexSyncedAt = result.syncedAt;
+    state.indexSyncedAt = result.skipped ? 0 : result.syncedAt;
     state.indexReady = true;
     document.body.dataset.indexReady = '1';
     if (state.lastSearch && !$('panel-search')?.hidden) {
@@ -449,10 +467,11 @@ async function loadCurrentTab() {
 
   state.currentTab = tab;
   state.editingFromSearch = false;
+  state.formTouched = false;
   setPageContext(tab.url);
+  resetAddForm(tab.url, tab.title);
 
   if (!state.client) {
-    resetAddForm(tab.url, tab.title);
     return;
   }
 
@@ -463,10 +482,12 @@ async function loadCurrentTab() {
     bookmark = null;
   }
 
+  if (state.formTouched) {
+    return;
+  }
+
   if (bookmark) {
     populateAddForm(bookmark, tab.url, tab.title);
-  } else {
-    resetAddForm(tab.url, tab.title);
   }
 }
 
@@ -536,7 +557,7 @@ async function saveBookmark() {
     return;
   }
 
-  const rawUrl = $('bookmark-url').value.trim().replace(/\/+$/, '');
+  const rawUrl = canonicalUrl($('bookmark-url').value);
   if (!rawUrl) {
     notify(t('urlEmpty'), 'error');
     return;
@@ -590,7 +611,7 @@ async function saveBookmark() {
 
     const nonRoot = [...state.selectedFolderIds].filter((folderId) => folderId !== -1);
     state.lastFolderId = nonRoot.length === 1 ? nonRoot[0] : (nonRoot.length === 0 ? -1 : state.lastFolderId);
-    api.storage.local.set({ lastFolder: state.lastFolderId }).catch(() => {});
+    api.storage.local.set({ [lastFolderKey()]: state.lastFolderId }).catch(() => {});
 
     state.currentBookmark = bookmark;
     mergeIndexedBookmark(bookmark);
@@ -760,6 +781,13 @@ async function runSearch({ append = false, silent = false } = {}) {
       source: 'server'
     });
   } catch (error) {
+    if (error?.status === 401 || error?.status === 403 || error?.status === 404) {
+      if (!append) {
+        target.replaceChildren(createMessage(formatError(error, t)));
+      }
+      setLoadMore(false);
+      return;
+    }
     if (state.indexReady) {
       const result = searchLocal(state.indexedBookmarks, { ...search, limit: SEARCH_LIMIT });
       state.searchPage = page;
@@ -1159,6 +1187,11 @@ function bindEvents() {
     });
   }
 
+  for (const id of ['bookmark-title', 'bookmark-tags', 'bookmark-description']) {
+    $(id).addEventListener('input', () => {
+      state.formTouched = true;
+    });
+  }
   $('bookmark-tags').addEventListener('input', showTagSuggestions);
   $('bookmark-tags').addEventListener('keydown', (event) => {
     const list = $('tag-suggestions');

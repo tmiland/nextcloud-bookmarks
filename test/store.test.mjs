@@ -60,3 +60,41 @@ test('clear removes one account and keeps the other', async () => {
   assert.equal(await store.meta('account-a'), null);
   assert.deepEqual((await store.getAll('account-b')).map((item) => item.id), [9]);
 });
+
+test('write epochs advance and block a stale replaceAll', async () => {
+  const store = makeStore();
+  assert.equal(await store.writeEpoch('account-a'), 0);
+  await store.upsert('account-a', { id: 1, url: 'https://one.example/' });
+  assert.equal(await store.writeEpoch('account-a'), 1);
+  await store.remove('account-a', 1);
+  assert.equal(await store.writeEpoch('account-a'), 2);
+
+  const replaced = await store.replaceAll(
+    'account-a',
+    [{ id: 2, url: 'https://two.example/' }],
+    1000,
+    { expectedEpoch: 1 }
+  );
+  assert.equal(replaced, false);
+  assert.deepEqual(await store.getAll('account-a'), []);
+});
+
+test('projects records down to the searchable fields', async () => {
+  const store = makeStore();
+  await store.replaceAll('account-a', [{
+    id: 1,
+    url: 'https://one.example/',
+    title: 'One',
+    tags: ['a'],
+    folders: [-1],
+    htmlContent: '<p>archived</p>',
+    textContent: 'archived text',
+    archivedFile: 7
+  }], 1000);
+
+  const stored = (await store.getAll('account-a'))[0];
+  assert.equal(stored.title, 'One');
+  assert.equal(stored.htmlContent, undefined);
+  assert.equal(stored.textContent, undefined);
+  assert.equal(stored.archivedFile, undefined);
+});

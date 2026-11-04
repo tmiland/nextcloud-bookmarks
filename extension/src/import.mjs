@@ -1,5 +1,5 @@
 import { ensureFolderPath } from './folders.mjs';
-import { isSupportedUrl } from './utils.mjs';
+import { isSupportedUrl, normalizeUrlForCompare } from './utils.mjs';
 
 function pathKey(path) {
   return JSON.stringify(path || []);
@@ -77,6 +77,24 @@ export function planImport({
     destinationId: Number.isFinite(Number(destinationId)) ? Number(destinationId) : -1,
     existingFolders: Array.isArray(existingFolders) ? existingFolders : []
   };
+}
+
+export function dedupeImportItems(items, existingUrls = new Set()) {
+  const newItems = [];
+  const seen = new Set();
+  let duplicates = 0;
+
+  for (const item of items || []) {
+    const key = normalizeUrlForCompare(item.url);
+    if (existingUrls.has(key) || seen.has(key)) {
+      duplicates++;
+    } else {
+      seen.add(key);
+      newItems.push(item);
+    }
+  }
+
+  return { items: newItems, duplicates };
 }
 
 export function countMissingFolders(folders, folderPlans, destinationId = -1) {
@@ -226,11 +244,13 @@ export async function runImport({
             { sleep }
           );
           job.created = (job.created || 0) + 1;
+          completed.add(index);
         } catch (error) {
           const detail = error?.data?.data ?? error?.data?.message;
           const text = Array.isArray(detail) ? detail.join(' ') : String(detail ?? '');
           if (/already exists|exists/i.test(text)) {
             job.skipped = (job.skipped || 0) + 1;
+            completed.add(index);
           } else {
             job.failed = (job.failed || 0) + 1;
             job.errors = job.errors || [];
@@ -240,7 +260,6 @@ export async function runImport({
           }
         }
 
-        completed.add(index);
         job.completed = [...completed].sort((a, b) => a - b);
         onProgress?.(job);
       }
@@ -260,10 +279,15 @@ export async function runImport({
   };
 }
 
+function importJobKey(account) {
+  return `importJob:${account}`;
+}
+
 export async function loadImportJob(api, account) {
   try {
-    const result = await api.storage.local.get('importJob');
-    const job = result?.importJob;
+    const key = importJobKey(account);
+    const result = await api.storage.local.get(key);
+    const job = result?.[key];
     if (!job || job.account !== account || !Array.isArray(job.items)) {
       return null;
     }
@@ -274,12 +298,12 @@ export async function loadImportJob(api, account) {
 }
 
 export async function saveImportJob(api, job) {
-  await api.storage.local.set({ importJob: job });
+  await api.storage.local.set({ [importJobKey(job.account)]: job });
 }
 
-export async function clearImportJob(api) {
+export async function clearImportJob(api, account) {
   try {
-    await api.storage.local.remove('importJob');
+    await api.storage.local.remove(importJobKey(account));
   } catch {
     // The job is best effort; a stale job can be discarded later.
   }

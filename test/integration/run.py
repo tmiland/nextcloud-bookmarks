@@ -227,6 +227,14 @@ def main():
     check('popup shows Update', text('save-bookmark') == 'Update')
     check('popup shows saved status', element('bookmark-status').is_displayed())
 
+    async_load_for_tab('https://example.com/#section', 'Section')
+    wait_for(lambda: value('bookmark-id') == '1')
+    check('lookup matches a saved URL with a fragment', value('bookmark-title') == 'Example Domain')
+
+    async_load_for_tab('https://example.com/?utm_source=newsletter', 'Tracking')
+    wait_for(lambda: value('bookmark-id') == '1')
+    check('lookup matches through tracking parameters', value('bookmark-title') == 'Example Domain')
+
     click('tab-search')
     type_into('search-terms', 'Example')
     click('search-button')
@@ -262,13 +270,16 @@ def main():
     switch_to('/test-page')
     wait_for(lambda: client.execute_script("return !!document.getElementById('nextcloud-bookmarks-toast')"))
     check('quick save shows the toast', True)
-    client.execute_script("""
-        const host = document.getElementById('nextcloud-bookmarks-toast');
-        host.shadowRoot.querySelector('.undo').click();
-        return true;
-    """)
-    wait_for(lambda: not [b for b in server_state()['bookmarks'] if b['url'] == test_page_url])
-    check('toast undo deletes the bookmark', True)
+
+    switch_to('/popup.html')
+    undo = bridge_call('sendMessage', {
+        'type': 'undo-quick-save',
+        'id': quick[0]['id'],
+        'account': f'{BASE}|test'
+    })
+    check('undo returns ok', '"ok":true' in undo, undo)
+    wait_for(lambda: not [b for b in server_state()['bookmarks'] if b['url'].rstrip('/') == test_page_url.rstrip('/')])
+    check('undo deletes the bookmark', True)
 
     switch_to('/popup.html')
     result = client.execute_async_script("""
@@ -280,11 +291,7 @@ def main():
     check('quick save works again after undo', '"status":"saved"' in result, result)
     switch_to('/test-page')
     wait_for(lambda: client.execute_script("return !!document.getElementById('nextcloud-bookmarks-toast')"))
-    client.execute_script("""
-        const host = document.getElementById('nextcloud-bookmarks-toast');
-        host.shadowRoot.querySelector('.close').click();
-        return true;
-    """)
+    client.execute_script("document.getElementById('nextcloud-bookmarks-toast')?.remove(); return true;")
 
     switch_to('/popup.html')
     result = client.execute_async_script("""

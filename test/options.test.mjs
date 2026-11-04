@@ -68,7 +68,7 @@ function findNode(nodes, id) {
   return null;
 }
 
-async function loadOptions({ tree = [], importJob = null } = {}) {
+async function loadOptions({ tree = [], importJob = null, fetchOverride = null, waitForFolders = true } = {}) {
   const dom = new JSDOM(optionsHtml, {
     url: 'moz-extension://test/options.html',
     pretendToBeVisual: true
@@ -96,7 +96,7 @@ async function loadOptions({ tree = [], importJob = null } = {}) {
           password: 'secret',
           searchMainTab: false
         },
-        ...(importJob ? { importJob } : {})
+        ...(importJob ? { [`importJob:${base}|test`]: importJob } : {})
       })
     },
     permissions: {
@@ -146,12 +146,18 @@ async function loadOptions({ tree = [], importJob = null } = {}) {
   globalThis.getComputedStyle = dom.window.getComputedStyle;
   globalThis.fetch = async (url, options) => {
     calls.push({ url: String(url), options });
+    if (fetchOverride) {
+      const override = await fetchOverride(String(url), options);
+      if (override !== undefined) return override;
+    }
     return realFetch(url, options);
   };
 
   moduleCounter += 1;
   await import(`../extension/src/options.mjs?dom=${moduleCounter}`);
-  await waitFor(() => dom.window.document.getElementById('folder-list').textContent.includes('Work'));
+  if (waitForFolders) {
+    await waitFor(() => dom.window.document.getElementById('folder-list').textContent.includes('Work'));
+  }
 
   return {
     dom,
@@ -311,6 +317,142 @@ test('shows and discards a persisted import job', async () => {
     document.getElementById('discard-import').click();
     await waitFor(() => document.getElementById('import-job').hidden === true);
     assert.match(document.getElementById('import-status').textContent, /discarded/);
+  } finally {
+    options.cleanup();
+  }
+});
+
+test('refuses to preview when the Nextcloud folder list could not be loaded', async () => {
+  const options = await loadOptions({
+    waitForFolders: false,
+    fetchOverride(url) {
+      if (url.includes('/folder')) {
+        return new Response(JSON.stringify({ status: 'error' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => document.getElementById('import-status').textContent.includes('Could not load Nextcloud folders'));
+    document.getElementById('preview-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('could not be loaded'));
+    assert.match(document.getElementById('import-status').textContent, /Preview again/);
+  } finally {
+    options.cleanup();
+  }
+});
+
+const importTree = [{
+  type: 'folder',
+  id: 'root________',
+  title: '',
+  children: [{
+    type: 'folder',
+    id: 'toolbar_____',
+    title: 'Bookmarks Toolbar',
+    children: [{
+      type: 'folder',
+      id: 'import-test',
+      title: 'Import Test',
+      children: [{
+        type: 'bookmark',
+        id: 'b1',
+        title: 'One',
+        url: 'https://one-import.example/'
+      }]
+    }]
+  }]
+}];
+
+test('invalidates the import preview when the destination changes', async () => {
+  const options = await loadOptions({ tree: importTree });
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => [...document.getElementById('firefox-folder').options]
+      .some((option) => option.value === 'import-test'));
+    document.getElementById('firefox-folder').value = 'import-test';
+    document.getElementById('import-folder').value = '10';
+    document.getElementById('preview-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('1 new'));
+
+    document.getElementById('import-folder').value = '12';
+    document.getElementById('import-folder').dispatchEvent(new Event('change', { bubbles: true }));
+    assert.equal(document.getElementById('start-import').disabled, true);
+    assert.match(document.getElementById('import-status').textContent, /Choose a Firefox folder/);
+  } finally {
+    options.cleanup();
+  }
+});
+
+test('blocks a new import while a pending job exists', async () => {
+  const account = `${base}|test`;
+  const importJob = {
+    account,
+    items: [{ url: 'https://pending.example/', title: 'Pending', path: [] }],
+    folderPlans: [],
+    destinationId: -1,
+    folderIds: {},
+    completed: [],
+    created: 0,
+    skipped: 0,
+    failed: 0,
+    errors: []
+  };
+  const options = await loadOptions({ tree: importTree, importJob });
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => document.getElementById('import-job').hidden === false);
+    await waitFor(() => [...document.getElementById('firefox-folder').options]
+      .some((option) => option.value === 'import-test'));
+    document.getElementById('firefox-folder').value = 'import-test';
+    document.getElementById('import-folder').value = '10';
+    document.getElementById('preview-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('1 new'));
+    document.getElementById('start-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('pending import'));
+  } finally {
+    options.cleanup();
+  }
+});
+
+test('keeps a failed import resumable and completes it on resume', async () => {
+  let failures = 3;
+  const options = await loadOptions({
+    tree: importTree,
+    fetchOverride(url, request) {
+      if (url.includes('/bookmark') && request?.method === 'POST' && failures > 0) {
+        failures--;
+        return new Response(JSON.stringify({ status: 'error', message: 'temporary' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => [...document.getElementById('firefox-folder').options]
+      .some((option) => option.value === 'import-test'));
+    document.getElementById('firefox-folder').value = 'import-test';
+    document.getElementById('import-folder').value = '10';
+    document.getElementById('preview-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('1 new'));
+
+    document.getElementById('start-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('failed 1'), 8000);
+    await waitFor(() => document.getElementById('import-job').hidden === false);
+    assert.match(document.getElementById('import-status').textContent, /resume/i);
+
+    document.getElementById('resume-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('Imported 1'), 8000);
+    assert.equal(document.getElementById('import-job').hidden, true);
   } finally {
     options.cleanup();
   }

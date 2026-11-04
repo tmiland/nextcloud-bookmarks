@@ -10,10 +10,14 @@ function fakeStore(meta = null) {
     async meta() {
       return state.meta;
     },
+    async writeEpoch() {
+      return state.epoch || 0;
+    },
     async replaceAll(account, bookmarks, syncedAt) {
       state.replaced.push({ account, bookmarks, syncedAt });
       state.bookmarks = bookmarks;
       state.meta = { syncedAt, count: bookmarks.length };
+      return true;
     },
     async upsert(account, bookmark) {
       state.replaced.push({ account, bookmark });
@@ -89,4 +93,45 @@ test('updateIndexAfterWrite upserts and removes records', async () => {
     { account: 'a', bookmark: { id: 3 } },
     { account: 'a', deletedId: 3 }
   ]);
+});
+
+test('syncBookmarks does not replace a write that happened during the fetch', async () => {
+  let release;
+  let started;
+  const startedPromise = new Promise((resolve) => { started = resolve; });
+  const gate = new Promise((resolve) => { release = resolve; });
+
+  const store = {
+    epoch: 0,
+    data: [],
+    async meta() {
+      return null;
+    },
+    async writeEpoch() {
+      return this.epoch;
+    },
+    async replaceAll(account, bookmarks, syncedAt, { expectedEpoch } = {}) {
+      if (expectedEpoch !== this.epoch) return false;
+      this.data = bookmarks;
+      return true;
+    }
+  };
+
+  const client = {
+    async getAllBookmarks() {
+      started();
+      await gate;
+      return { status: 'success', data: [{ id: 1, title: 'Server copy' }] };
+    }
+  };
+
+  const pending = syncBookmarks({ client, store, account: 'a', force: true, now: 1000 });
+  await startedPromise;
+  store.epoch = 1;
+  release();
+
+  const result = await pending;
+  assert.equal(result.synced, false);
+  assert.equal(result.skipped, true);
+  assert.deepEqual(store.data, []);
 });

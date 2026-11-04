@@ -1,4 +1,4 @@
-import { isSupportedUrl } from './utils.mjs';
+import { canonicalUrl, isSupportedUrl } from './utils.mjs';
 
 export function quickSavePlan({ tab, settings, lastFolder } = {}) {
   const rawUrl = String(tab?.url ?? '').trim();
@@ -12,7 +12,7 @@ export function quickSavePlan({ tab, settings, lastFolder } = {}) {
 
   const folder = Number(lastFolder);
   return {
-    url: rawUrl.replace(/\/+$/, ''),
+    url: canonicalUrl(rawUrl),
     title: String(tab?.title ?? '').trim() || rawUrl,
     folders: Number.isFinite(folder) && folder !== -1 ? [folder] : [-1]
   };

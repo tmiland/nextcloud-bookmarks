@@ -559,5 +559,17 @@
   },
   "importFoldersCreated": {
     "message": "{{1}} folders created."
+  },
+  "importJobExists": {
+    "message": "Resume or discard the pending import before starting a new one."
+  },
+  "previewStale": {
+    "message": "The destination changed. Preview again."
+  },
+  "foldersUnavailable": {
+    "message": "Nextcloud folders could not be loaded. Preview again before importing."
+  },
+  "extensionDescription": {
+    "message": "Unofficial Firefox client for the Nextcloud Bookmarks app: save, search, organize, and import bookmarks."
   }
 }

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   clearImportJob,
   countMissingFolders,
+  dedupeImportItems,
   ensureImportFolders,
   folderIdForPath,
   loadImportJob,
@@ -273,6 +274,54 @@ test('loadImportJob only returns a job for the same account', async () => {
   assert.deepEqual(await loadImportJob(api, 'account-a'), job);
   assert.equal(await loadImportJob(api, 'account-b'), null);
 
-  await clearImportJob(api);
+  await clearImportJob(api, 'account-a');
   assert.equal(await loadImportJob(api, 'account-a'), null);
+});
+
+test('runImport keeps failed items resumable and retries them', async () => {
+  let attempts = 0;
+  const client = {
+    async createBookmark() {
+      attempts++;
+      if (attempts <= 3) {
+        throw Object.assign(new Error('server down'), { status: 503 });
+      }
+      return { status: 'success', item: { id: 1 } };
+    }
+  };
+
+  const job = {
+    items: [{ url: 'https://retry.example/', title: 'Retry', path: [] }],
+    destinationId: -1,
+    folderIds: {},
+    completed: [],
+    created: 0,
+    skipped: 0,
+    failed: 0,
+    errors: []
+  };
+
+  const first = await runImport({ client, job, sleep: async () => {} });
+  assert.equal(first.created, 0);
+  assert.equal(first.failed, 1);
+  assert.equal(first.remaining, 1);
+  assert.deepEqual(job.completed, []);
+
+  const second = await runImport({ client, job, sleep: async () => {} });
+  assert.equal(second.created, 1);
+  assert.equal(second.remaining, 0);
+  assert.deepEqual(job.completed, [0]);
+});
+
+test('dedupeImportItems skips server duplicates and duplicates within the tree', () => {
+  const existing = new Set(['https://existing.example/']);
+  const result = dedupeImportItems([
+    { url: 'https://existing.example/', title: 'Existing', path: [] },
+    { url: 'https://new.example/', title: 'New', path: [] },
+    { url: 'https://new.example', title: 'New again', path: [] },
+    { url: 'https://other.example/?utm_source=x', title: 'Other', path: [] }
+  ], existing);
+
+  assert.deepEqual(result.items.map((item) => item.title), ['New', 'Other']);
+  assert.equal(result.duplicates, 2);
 });

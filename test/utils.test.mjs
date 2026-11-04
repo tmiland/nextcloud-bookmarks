@@ -95,6 +95,14 @@ test('normalizeUrlForCompare ignores hashes and trailing slashes', () => {
     normalizeUrlForCompare('https://example.com/path/'),
     normalizeUrlForCompare('https://example.com/path')
   );
+  assert.equal(
+    normalizeUrlForCompare('https://example.com/page/?next=/foo/'),
+    'https://example.com/page?next=/foo/'
+  );
+  assert.equal(
+    normalizeUrlForCompare('https://example.com/?utm_source=newsletter'),
+    'https://example.com/'
+  );
 });
 
 test('parseTags and joinTags round-trip comma-separated tags', () => {
@@ -117,4 +125,12 @@ test('formatError explains common failures and preserves custom messages', () =>
   assert.match(formatError({ status: 404 }), /Bookmarks app/);
   assert.match(formatError({ status: 500, data: { message: 'boom' } }), /boom/);
   assert.equal(formatError(new Error('The bookmark was not saved.')), 'The bookmark was not saved.');
+});
+
+test('formatError translates coded errors', () => {
+  const translate = (key) => (key === 'errorNetwork' ? 'Network error' : key);
+  assert.equal(
+    formatError(Object.assign(new Error('Could not reach the Nextcloud server'), { code: 'errorNetwork' }), translate),
+    'Network error'
+  );
 });
