@@ -228,9 +228,10 @@ Main files:
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep changes focused, run
-`npm test` and `npm run test:integration`, and describe the Firefox and Nextcloud
-Bookmarks versions you tested.
+Issues and pull requests are welcome. Please use the bug-report or
+feature-request issue template, keep changes focused, run `npm test` and
+`npm run test:integration`, and describe the Firefox and Nextcloud Bookmarks
+versions you tested.
 
 ## Support
 

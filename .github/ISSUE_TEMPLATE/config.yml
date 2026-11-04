@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Nextcloud Bookmarks app or server issue
+    url: https://github.com/nextcloud/bookmarks/issues
+    about: Report bugs in the Nextcloud Bookmarks app or your Nextcloud server upstream. This extension is an unofficial client.

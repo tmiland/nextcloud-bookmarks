@@ -1,0 +1,83 @@
+name: Feature request
+description: Suggest an improvement to the extension.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. This extension is a focused Firefox client
+        for the Nextcloud Bookmarks app. It deliberately does **not** do
+        automatic or two-way Firefox bookmark synchronization; floccus is a
+        better fit for that use case.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the workflow or frustration behind the request, not just the UI change.
+      placeholder: When I save a page I have to ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should the extension do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other extensions, Nextcloud web-app workflows, or workarounds you tried.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Saving / quick save
+        - Search
+        - Folders
+        - Firefox import
+        - Settings / permissions
+        - UI / theme / i18n
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How much would this help?
+      options:
+        - Nice to have
+        - Would use it often
+        - Blocking my workflow
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, examples from other apps, or Nextcloud Bookmarks API details.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is a request for the extension, not the Nextcloud Bookmarks app itself.
+          required: true
+        - label: I understand this is an unofficial extension and is not affiliated with Nextcloud.
+          required: true
+        - label: I would be willing to test a development build if needed.
+          required: false

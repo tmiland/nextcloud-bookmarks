@@ -1,0 +1,141 @@
+name: Bug report
+description: Report a reproducible problem with the Nextcloud Bookmarks extension.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. This is an **unofficial**
+        Firefox client for the Nextcloud Bookmarks app; server-side or
+        Bookmarks-app bugs belong upstream.
+
+        **Do not paste app passwords, private server URLs, personal bookmark
+        data, or unredacted logs.** Redact anything sensitive before submitting.
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+      description: Shown in the Settings sidebar (for example `v1.0.0`) or under `about:addons`.
+      placeholder: v1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: firefox-version
+    attributes:
+      label: Firefox version
+      description: From `about:support` or the Firefox menu.
+      placeholder: "156.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: nextcloud-version
+    attributes:
+      label: Nextcloud version
+      description: From Nextcloud → Settings → Overview.
+      placeholder: "31.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: bookmarks-version
+    attributes:
+      label: Nextcloud Bookmarks app version
+      description: From Nextcloud → Apps → Your apps → Bookmarks.
+      placeholder: "16.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: How did you install the extension?
+      options:
+        - AMO (addons.mozilla.org)
+        - Temporary add-on (about:debugging)
+        - Built from source
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Saving / quick save
+        - Search
+        - Folders
+        - Firefox import
+        - Settings / permissions
+        - UI / theme / i18n
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Be specific about the page, action, and whether it happens every time.
+      placeholder: |
+        1. Open https://example.com/
+        2. Press Alt+Shift+S (or open the popup)
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the exact error text shown by the extension.
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant console errors
+      description: |
+        Firefox: `about:debugging` → This Firefox → Nextcloud Bookmarks → Inspect → Console.
+        Paste only relevant errors and remove credentials, private URLs, and personal data.
+      render: shell
+
+  - type: input
+    id: setup
+    attributes:
+      label: Nextcloud setup (optional)
+      description: Docker, snap, shared hosting, reverse proxy, etc. Do not include a private full URL.
+      placeholder: Self-hosted, Docker, behind a reverse proxy
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am using the latest available release.
+          required: true
+        - label: I removed app passwords, private hostnames, and personal data from this report.
+          required: true
+        - label: I understand this is an unofficial extension and is not affiliated with Nextcloud.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        After submitting, you can drag screenshots or a screen recording into a
+        comment. Redact private data first.
