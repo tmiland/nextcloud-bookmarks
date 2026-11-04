@@ -172,3 +172,35 @@ test('updateFolder uses PUT and the folder id', async () => {
   assert.equal(body.get('title'), 'Renamed');
   assert.equal(body.get('parent_folder'), '-1');
 });
+
+test('getBookmarks sends sortby and folder when set', async () => {
+  const calls = captureFetch(jsonResponse({ status: 'success', data: [] }));
+  await client().getBookmarks({ sortby: 'title', folder: 10 });
+
+  const url = new URL(calls[0].url);
+  assert.equal(url.searchParams.get('sortby'), 'title');
+  assert.equal(url.searchParams.get('folder'), '10');
+});
+
+test('getBookmarks maps filter names to API flags', async () => {
+  for (const [filter, key] of [
+    ['untagged', 'untagged'],
+    ['unavailable', 'unavailable'],
+    ['duplicated', 'duplicated']
+  ]) {
+    const calls = captureFetch(jsonResponse({ status: 'success', data: [] }));
+    await client().getBookmarks({ filter });
+    const url = new URL(calls[0].url);
+    assert.equal(url.searchParams.get(key), 'true', filter);
+  }
+});
+
+test('getBookmarks omits the folder for the all-folders view', async () => {
+  const calls = captureFetch(jsonResponse({ status: 'success', data: [] }));
+  await client().getBookmarks({ folder: null, filter: 'all' });
+  const url = new URL(calls[0].url);
+  assert.equal(url.searchParams.has('folder'), false);
+  assert.equal(url.searchParams.has('untagged'), false);
+  assert.equal(url.searchParams.has('unavailable'), false);
+  assert.equal(url.searchParams.has('duplicated'), false);
+});

@@ -77,15 +77,40 @@ export class NextcloudClient {
     return data;
   }
 
-  async getBookmarks({ terms = [], tags = [], conjunction = 'and', page = 0, limit = 30 } = {}) {
+  async getBookmarks({
+    terms = [],
+    tags = [],
+    conjunction = 'and',
+    page = 0,
+    limit = 30,
+    sortby = '',
+    folder = null,
+    filter = 'all'
+  } = {}) {
+    const params = {
+      search: terms,
+      tags,
+      conjunction,
+      page,
+      limit
+    };
+
+    if (sortby) {
+      params.sortby = sortby;
+    }
+    if (folder !== null && folder !== undefined && folder !== '') {
+      params.folder = folder;
+    }
+    if (filter === 'untagged') {
+      params.untagged = true;
+    } else if (filter === 'unavailable') {
+      params.unavailable = true;
+    } else if (filter === 'duplicated') {
+      params.duplicated = true;
+    }
+
     return this.request('/bookmark', {
-      params: toParams({
-        search: terms,
-        tags,
-        conjunction,
-        page,
-        limit
-      })
+      params: toParams(params)
     });
   }
 
