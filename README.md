@@ -14,7 +14,7 @@ Firefox bookmarks manually.
 > Bookmarks are separate open-source projects. This extension is an independent
 > client for the public Bookmarks REST API.
 
-**Status:** v0.1.1 · Firefox MV3 · AMO submission not yet made.
+**Status:** v0.1.2 · Firefox MV3 · AMO submission not yet made.
 
 ## Screenshots
 

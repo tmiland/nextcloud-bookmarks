@@ -33,6 +33,7 @@ function setText(element, text) {
 
 async function init() {
   bindEvents();
+  updateVersion();
   await loadSettings();
   await refreshPermission();
   await initImport();
@@ -99,6 +100,13 @@ function updateSidebar() {
     target.textContent = new URL(normalizeServerUrl(state.settings.serverUrl)).host;
   } catch {
     target.textContent = 'Invalid URL';
+  }
+}
+
+function updateVersion() {
+  const target = $('extension-version');
+  if (target) {
+    target.textContent = `v${api.runtime.getManifest().version}`;
   }
 }
 
