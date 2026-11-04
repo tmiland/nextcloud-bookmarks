@@ -1,6 +1,10 @@
+import { cacheKey, readCache, writeCache } from './cache.mjs';
 import { fetchFolders } from './folders.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
-import { buildClient, hasHostPermission, loadSettings } from './settings.mjs';
+import { accountKey, buildClient, hasHostPermission, loadSettings } from './settings.mjs';
+import { searchLocal } from './search.mjs';
+import { BookmarkStore } from './store.mjs';
+import { syncBookmarks, updateIndexAfterWrite } from './sync.mjs';
 import {
   buildFolderTree,
   formatDate,
@@ -11,6 +15,9 @@ import {
 } from './utils.mjs';
 
 const api = globalThis.browser ?? globalThis.chrome;
+
+const SEARCH_LIMIT = 30;
+const INDEX_MAX_AGE = 5 * 60 * 1000;
 
 const state = {
   settings: {},
@@ -23,7 +30,18 @@ const state = {
   knownTags: [],
   tagIndex: -1,
   pendingDeleteId: null,
-  currentTab: { url: '', title: '' }
+  currentTab: { url: '', title: '' },
+  currentBookmark: null,
+  account: '',
+  store: null,
+  indexedBookmarks: [],
+  indexSyncedAt: 0,
+  indexReady: false,
+  lastSearch: null,
+  searchPage: 0,
+  searchHasMore: false,
+  searchSource: 'server',
+  editingFromSearch: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -105,8 +123,31 @@ async function init() {
     return;
   }
 
-  await Promise.allSettled([loadFolders(), loadTags()]);
+  state.account = accountKey(state.serverUrl, state.settings.username);
+  state.store = new BookmarkStore();
+  state.lastFolderId = await loadLastFolder();
+
+  const [foldersEntry, tagsEntry] = await Promise.all([
+    readCache(api, cacheKey('folders', state.account)),
+    readCache(api, cacheKey('tags', state.account))
+  ]);
+
+  if (foldersEntry) {
+    applyFolders(foldersEntry.value);
+    void refreshFolders();
+  } else {
+    await refreshFolders();
+  }
+
+  if (tagsEntry) {
+    applyTags(tagsEntry.value);
+    void refreshTags();
+  } else {
+    await refreshTags();
+  }
+
   await loadCurrentTab();
+  void loadIndex();
 }
 
 function openOptions() {
@@ -123,24 +164,49 @@ async function loadLastFolder() {
   }
 }
 
-async function loadFolders() {
+function applyFolders(list) {
+  const own = (list || []).filter((folder) => !folder.shared);
+  state.folders = buildFolderTree(own);
+  state.folderById = new Map(state.folders.map((folder) => [folder.id, folder]));
+  populateFolderSelect();
+  populateSearchFolderSelect();
+  if (state.currentBookmark) {
+    applyBookmarkFolder(state.currentBookmark);
+  }
+}
+
+async function refreshFolders() {
   if (!state.client) {
     return;
   }
 
-  let list = [];
   try {
-    list = await fetchFolders(state.client, state.settings.username);
+    const list = await fetchFolders(state.client, state.settings.username);
+    applyFolders(list);
+    await writeCache(api, cacheKey('folders', state.account), list);
   } catch {
-    list = [];
+    // Keep cached folders on a failed refresh.
+  }
+}
+
+function populateSearchFolderSelect() {
+  const select = $('search-folder');
+  if (!select) {
+    return;
   }
 
-  const own = list.filter((folder) => !folder.shared);
+  const previous = select.value;
+  select.replaceChildren(new Option(t('allFolders'), ''));
+  select.append(new Option(t('rootNoFolder'), '-1'));
 
-  state.folders = buildFolderTree(own);
-  state.folderById = new Map(state.folders.map((folder) => [folder.id, folder]));
-  state.lastFolderId = await loadLastFolder();
-  populateFolderSelect();
+  for (const folder of state.folders) {
+    const indent = '\u00a0\u00a0'.repeat(folder.depth);
+    select.append(new Option(`${indent}${folder.title}`, String(folder.id)));
+  }
+
+  select.value = Array.from(select.options).some((option) => option.value === previous)
+    ? previous
+    : '';
 }
 
 function populateFolderSelect() {
@@ -230,7 +296,14 @@ function setFolderNote(text) {
   }
 }
 
-async function loadTags() {
+function applyTags(list) {
+  state.knownTags = (list || [])
+    .map((item) => (typeof item === 'string' ? item : item?.name))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+async function refreshTags() {
   if (!state.client) {
     return;
   }
@@ -238,12 +311,70 @@ async function loadTags() {
   try {
     const result = await state.client.getTags();
     const list = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
-    state.knownTags = list
-      .map((item) => (typeof item === 'string' ? item : item?.name))
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    applyTags(list);
+    await writeCache(api, cacheKey('tags', state.account), list);
   } catch {
-    state.knownTags = [];
+    // Keep cached tags on a failed refresh.
+  }
+}
+
+async function loadIndex() {
+  if (!state.store || !state.account) {
+    return;
+  }
+
+  try {
+    const [items, meta] = await Promise.all([
+      state.store.getAll(state.account),
+      state.store.meta(state.account)
+    ]);
+    state.indexedBookmarks = items;
+    state.indexSyncedAt = meta?.syncedAt ?? 0;
+    state.indexReady = Boolean(meta) || items.length > 0;
+    document.body.dataset.indexReady = state.indexReady ? '1' : 'loading';
+    if (!meta || Date.now() - meta.syncedAt > INDEX_MAX_AGE) {
+      void refreshIndex(false);
+    }
+  } catch {
+    state.indexReady = false;
+    document.body.dataset.indexReady = 'error';
+  }
+}
+
+async function refreshIndex(force = false) {
+  if (!state.store || !state.client || !state.account) {
+    return false;
+  }
+  try {
+    const result = await syncBookmarks({
+      client: state.client,
+      store: state.store,
+      account: state.account,
+      force
+    });
+    state.indexedBookmarks = await state.store.getAll(state.account);
+    state.indexSyncedAt = result.syncedAt;
+    state.indexReady = true;
+    document.body.dataset.indexReady = '1';
+    if (state.lastSearch && !$('panel-search')?.hidden) {
+      void runSearch({ silent: true });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function localSearchAvailable() {
+  return state.indexReady && Date.now() - state.indexSyncedAt <= INDEX_MAX_AGE;
+}
+
+function mergeIndexedBookmark(bookmark) {
+  const index = state.indexedBookmarks.findIndex((item) => String(item.id) === String(bookmark.id));
+  if (index >= 0) {
+    state.indexedBookmarks[index] = bookmark;
+  } else {
+    state.indexedBookmarks.push(bookmark);
   }
 }
 
@@ -254,6 +385,7 @@ async function loadCurrentTab() {
   }
 
   state.currentTab = tab;
+  state.editingFromSearch = false;
   setPageContext(tab.url);
 
   if (!state.client) {
@@ -286,6 +418,7 @@ async function getCurrentTab() {
 }
 
 function populateAddForm(bookmark, fallbackUrl, fallbackTitle) {
+  state.currentBookmark = bookmark;
   $('bookmark-url').value = bookmark.url || fallbackUrl || '';
   $('bookmark-title').value = bookmark.title || fallbackTitle || '';
   $('bookmark-tags').value = joinTags(bookmark.tags);
@@ -302,6 +435,8 @@ function populateAddForm(bookmark, fallbackUrl, fallbackTitle) {
 }
 
 function resetAddForm(url, title) {
+  state.currentBookmark = null;
+  state.editingFromSearch = false;
   const previousUrl = $('bookmark-url').value;
   const changed = previousUrl !== (url ?? '');
 
@@ -401,7 +536,23 @@ async function saveBookmark() {
       api.storage.local.set({ lastFolder: state.lastFolderId }).catch(() => {});
     }
 
+    state.currentBookmark = bookmark;
+    mergeIndexedBookmark(bookmark);
+    try {
+      await updateIndexAfterWrite({ store: state.store, account: state.account, bookmark });
+    } catch {
+      // The index is best effort; the server write already succeeded.
+    }
+    void refreshTags();
+
+    const wasEditingFromSearch = state.editingFromSearch;
+    state.editingFromSearch = false;
     notify(id ? t('bookmarkUpdated') : t('bookmarkSaved'), 'success');
+
+    if (wasEditingFromSearch && state.lastSearch) {
+      activateTab('search');
+      void runSearch();
+    }
   } catch (error) {
     notify(formatError(error, t), 'error');
   } finally {
@@ -434,6 +585,12 @@ async function confirmDelete() {
 
   try {
     await state.client.deleteBookmark(id);
+    state.indexedBookmarks = state.indexedBookmarks.filter((item) => String(item.id) !== String(id));
+    try {
+      await updateIndexAfterWrite({ store: state.store, account: state.account, deletedId: id });
+    } catch {
+      // The index is best effort; the server delete already succeeded.
+    }
     document.getElementById(`bookmark-${id}`)?.remove();
 
     if (String($('bookmark-id').value) === String(id)) {
@@ -447,6 +604,9 @@ async function confirmDelete() {
       await loadCurrentTab();
     }
 
+    if (state.lastSearch && !$('panel-search')?.hidden) {
+      void runSearch({ silent: true });
+    }
     notify(t('bookmarkDeleted'), 'success');
   } catch (error) {
     notify(formatError(error, t), 'error');
@@ -468,41 +628,110 @@ function activateTab(name) {
   }
 }
 
-async function runSearch() {
+function buildSearchQuery() {
+  const folderValue = $('search-folder')?.value ?? '';
+  return {
+    terms: parseTags($('search-terms').value),
+    tags: parseTags($('search-tags').value),
+    conjunction: $('search-conjunction').value,
+    sortby: $('search-sort')?.value || 'lastmodified',
+    folderId: folderValue === '' ? null : Number(folderValue),
+    filter: $('search-filter')?.value || 'all',
+    page: $('search-no-paging')?.checked ? -1 : 0
+  };
+}
+
+async function runSearch({ append = false, silent = false } = {}) {
   if (!state.client) {
     notify(t('setServerUrl'), 'error', t('openSettings'), openOptions);
     return;
   }
 
-  const terms = parseTags($('search-terms').value);
-  const tags = parseTags($('search-tags').value);
-  const conjunction = $('search-conjunction').value;
-  const page = $('search-no-paging').checked ? -1 : 0;
+  const query = buildSearchQuery();
+  const page = append ? state.searchPage + 1 : query.page;
+  const search = { ...query, page };
+  const target = $('search-results');
+  state.lastSearch = search;
 
-  await searchInto({
-    terms,
-    tags,
-    conjunction,
-    page,
-    target: $('search-results')
-  });
-}
+  if (!append) {
+    target.replaceChildren();
+    if (!silent) {
+      target.append(createMessage(t('searching')));
+    }
+  }
 
-
-async function searchInto({ terms, tags, conjunction, page, target, emptyMessage }) {
-  target.replaceChildren();
-  target.append(createMessage(t('searching')));
+  if (localSearchAvailable()) {
+    const result = searchLocal(state.indexedBookmarks, { ...search, limit: SEARCH_LIMIT });
+    state.searchPage = page;
+    state.searchHasMore = result.hasMore;
+    state.searchSource = 'local';
+    renderResults(target, result.data, {
+      append,
+      total: result.total,
+      hasMore: result.hasMore,
+      source: 'local'
+    });
+    return;
+  }
 
   try {
-    const result = await state.client.getBookmarks({ terms, tags, conjunction, page, limit: 30 });
+    const result = await state.client.getBookmarks({
+      terms: search.terms,
+      tags: search.tags,
+      conjunction: search.conjunction,
+      page,
+      limit: SEARCH_LIMIT,
+      sortby: search.sortby,
+      folder: search.folderId,
+      filter: search.filter
+    });
+
     if (result?.status === 'error') {
-      target.replaceChildren(createMessage(result.message || t('serverError')));
+      if (!append) {
+        target.replaceChildren(createMessage(result.message || t('serverError')));
+      }
+      setLoadMore(false);
       return;
     }
 
-    renderResults(target, result?.data ?? [], emptyMessage);
+    const data = result?.data ?? [];
+    state.searchPage = page;
+    state.searchHasMore = page !== -1 && data.length >= SEARCH_LIMIT;
+    state.searchSource = 'server';
+    renderResults(target, data, {
+      append,
+      hasMore: state.searchHasMore,
+      source: 'server'
+    });
   } catch (error) {
-    target.replaceChildren(createMessage(formatError(error, t)));
+    if (state.indexReady) {
+      const result = searchLocal(state.indexedBookmarks, { ...search, limit: SEARCH_LIMIT });
+      state.searchPage = page;
+      state.searchHasMore = result.hasMore;
+      state.searchSource = 'cached';
+      renderResults(target, result.data, {
+        append,
+        total: result.total,
+        hasMore: result.hasMore,
+        source: 'cached'
+      });
+      notify(t('cachedResults'), 'info');
+    } else if (!append) {
+      target.replaceChildren(createMessage(formatError(error, t)));
+      setLoadMore(false);
+    }
+  }
+}
+
+function setLoadMore(visible) {
+  setVisible($('load-more'), visible);
+}
+
+async function refreshIndexFromButton() {
+  const ok = await refreshIndex(true);
+  notify(ok ? t('indexRefreshed') : t('indexRefreshFailed'), ok ? 'success' : 'error');
+  if (ok && state.lastSearch) {
+    void runSearch({ silent: true });
   }
 }
 
@@ -513,22 +742,49 @@ function createMessage(text) {
   return div;
 }
 
-function renderResults(container, bookmarks, emptyMessage) {
-  container.replaceChildren();
+function renderResults(container, bookmarks, {
+  append = false,
+  total = null,
+  hasMore = false,
+  source = 'server',
+  emptyMessage
+} = {}) {
+  if (!append) {
+    container.replaceChildren();
+  }
 
-  if (!bookmarks.length) {
+  if (!bookmarks.length && !append) {
     container.append(createMessage(emptyMessage || t('noBookmarksFound')));
+    setLoadMore(false);
+    document.body.dataset.searchSource = source;
     return;
   }
 
-  const heading = document.createElement('p');
-  heading.className = 'results-heading';
-  heading.textContent = bookmarks.length === 1 ? t('bookmarkCountOne') : t('bookmarkCountMany', [bookmarks.length]);
-  container.append(heading);
+  const count = append
+    ? container.querySelectorAll('.result').length + bookmarks.length
+    : bookmarks.length;
+
+  let heading = container.querySelector('.results-heading');
+  if (!heading) {
+    heading = document.createElement('p');
+    heading.className = 'results-heading';
+    container.prepend(heading);
+  }
+  heading.textContent = count === 1 ? t('bookmarkCountOne') : t('bookmarkCountMany', [count]);
+
+  if (source === 'cached') {
+    const note = document.createElement('span');
+    note.className = 'results-cached';
+    note.textContent = ` · ${t('cachedResults')}`;
+    heading.append(note);
+  }
 
   for (const bookmark of bookmarks) {
     container.append(renderResult(bookmark));
   }
+
+  setLoadMore(hasMore);
+  document.body.dataset.searchSource = source;
 }
 
 function renderResult(bookmark) {
@@ -578,6 +834,21 @@ function renderResult(bookmark) {
     meta.append(date);
   }
 
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'result-edit';
+  edit.textContent = t('editButton');
+  edit.addEventListener('click', () => editResult(bookmark));
+  meta.append(edit);
+
+  const open = document.createElement('a');
+  open.className = 'result-open';
+  open.textContent = t('openInNextcloud');
+  open.href = `${state.serverUrl}/index.php/apps/bookmarks/bookmarks/${encodeURIComponent(bookmark.id)}`;
+  open.target = '_blank';
+  open.rel = 'noopener noreferrer';
+  meta.append(open);
+
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'result-delete';
@@ -587,6 +858,14 @@ function renderResult(bookmark) {
 
   card.append(meta);
   return card;
+}
+
+function editResult(bookmark) {
+  state.editingFromSearch = true;
+  populateAddForm(bookmark, bookmark.url, bookmark.title);
+  activateTab('add');
+  $('bookmark-title').focus();
+  document.documentElement.scrollTop = 0;
 }
 
 function searchForTag(tag) {
@@ -724,7 +1003,9 @@ function bindEvents() {
   $('confirm-delete-yes').addEventListener('click', confirmDelete);
   $('confirm-delete-no').addEventListener('click', cancelDelete);
 
-  $('search-button').addEventListener('click', runSearch);
+  $('search-button').addEventListener('click', () => runSearch());
+  $('load-more').addEventListener('click', () => runSearch({ append: true }));
+  $('refresh-index').addEventListener('click', refreshIndexFromButton);
   for (const id of ['search-terms', 'search-tags']) {
     $(id).addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {

@@ -370,8 +370,9 @@ textarea {
 .search-controls {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
-  margin: 2px 0 14px;
+  margin: 2px 0 10px;
 }
 
 .mini-field {
@@ -409,8 +410,20 @@ textarea {
   accent-color: var(--accent);
 }
 
-.search-controls .button {
-  margin-left: auto;
+.search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.search-actions .button-primary {
+  flex: 1;
+}
+
+#load-more {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .results {
@@ -490,15 +503,28 @@ textarea {
   font-size: 9px;
 }
 
+.result-edit,
+.result-open,
 .result-delete {
-  margin-left: auto;
   padding: 2px 6px;
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
+  border: 1px solid var(--line-strong);
   border-radius: 4px;
   background: transparent;
-  color: var(--danger);
+  color: var(--muted);
   cursor: pointer;
   font-size: 9px;
+}
+
+.result-edit:hover,
+.result-open:hover {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.result-delete {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  color: var(--danger);
 }
 
 .result-date {

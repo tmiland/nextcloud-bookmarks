@@ -421,5 +421,59 @@
   },
   "close": {
     "message": "Close"
+  },
+  "sortLabel": {
+    "message": "Sort"
+  },
+  "sortLastModified": {
+    "message": "Last modified"
+  },
+  "sortTitle": {
+    "message": "Title"
+  },
+  "sortUrl": {
+    "message": "URL"
+  },
+  "sortClickCount": {
+    "message": "Most clicked"
+  },
+  "filterLabel": {
+    "message": "Filter"
+  },
+  "filterAll": {
+    "message": "All"
+  },
+  "filterUntagged": {
+    "message": "Untagged"
+  },
+  "filterUnavailable": {
+    "message": "Broken links"
+  },
+  "filterDuplicated": {
+    "message": "Duplicates"
+  },
+  "allFolders": {
+    "message": "All folders"
+  },
+  "loadMore": {
+    "message": "Load more"
+  },
+  "editButton": {
+    "message": "Edit"
+  },
+  "openInNextcloud": {
+    "message": "Open in Nextcloud"
+  },
+  "cachedResults": {
+    "message": "Cached results"
+  },
+  "refreshIndex": {
+    "message": "Refresh index"
+  },
+  "indexRefreshed": {
+    "message": "Search index refreshed."
+  },
+  "indexRefreshFailed": {
+    "message": "Could not refresh the search index."
   }
 }

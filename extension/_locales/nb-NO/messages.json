@@ -421,5 +421,59 @@
   },
   "close": {
     "message": "Lukk"
+  },
+  "sortLabel": {
+    "message": "Sorter"
+  },
+  "sortLastModified": {
+    "message": "Sist endret"
+  },
+  "sortTitle": {
+    "message": "Tittel"
+  },
+  "sortUrl": {
+    "message": "URL"
+  },
+  "sortClickCount": {
+    "message": "Mest klikket"
+  },
+  "filterLabel": {
+    "message": "Filter"
+  },
+  "filterAll": {
+    "message": "Alle"
+  },
+  "filterUntagged": {
+    "message": "Uten stikkord"
+  },
+  "filterUnavailable": {
+    "message": "Ødelagte lenker"
+  },
+  "filterDuplicated": {
+    "message": "Duplikater"
+  },
+  "allFolders": {
+    "message": "Alle mapper"
+  },
+  "loadMore": {
+    "message": "Last inn flere"
+  },
+  "editButton": {
+    "message": "Rediger"
+  },
+  "openInNextcloud": {
+    "message": "Åpne i Nextcloud"
+  },
+  "cachedResults": {
+    "message": "Bufrede resultater"
+  },
+  "refreshIndex": {
+    "message": "Oppdater indeks"
+  },
+  "indexRefreshed": {
+    "message": "Søkeindeksen er oppdatert."
+  },
+  "indexRefreshFailed": {
+    "message": "Kunne ikke oppdatere søkeindeksen."
   }
 }

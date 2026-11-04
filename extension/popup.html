@@ -100,14 +100,43 @@
                 <option value="or" data-i18n="matchAny">any</option>
               </select>
             </label>
+            <label class="mini-field">
+              <span data-i18n="sortLabel">Sort</span>
+              <select id="search-sort">
+                <option value="lastmodified" data-i18n="sortLastModified">Last modified</option>
+                <option value="title" data-i18n="sortTitle">Title</option>
+                <option value="url" data-i18n="sortUrl">URL</option>
+                <option value="clickcount" data-i18n="sortClickCount">Most clicked</option>
+              </select>
+            </label>
+            <label class="mini-field">
+              <span data-i18n="filterLabel">Filter</span>
+              <select id="search-filter">
+                <option value="all" data-i18n="filterAll">All</option>
+                <option value="untagged" data-i18n="filterUntagged">Untagged</option>
+                <option value="unavailable" data-i18n="filterUnavailable">Broken links</option>
+                <option value="duplicated" data-i18n="filterDuplicated">Duplicates</option>
+              </select>
+            </label>
+            <label class="mini-field">
+              <span data-i18n="folderLabel">Folder</span>
+              <select id="search-folder">
+                <option value="" data-i18n="allFolders">All folders</option>
+              </select>
+            </label>
             <label class="check">
               <input type="checkbox" id="search-no-paging">
               <span data-i18n="allResults">All results</span>
             </label>
+          </div>
+
+          <div class="search-actions">
             <button type="button" class="button button-primary" id="search-button" data-i18n="searchButton">Search</button>
+            <button type="button" class="button button-quiet button-small" id="refresh-index" data-i18n="refreshIndex">Refresh index</button>
           </div>
 
           <div class="results" id="search-results"></div>
+          <button type="button" class="button button-quiet" id="load-more" data-i18n="loadMore" hidden>Load more</button>
         </section>
 
       </main>
