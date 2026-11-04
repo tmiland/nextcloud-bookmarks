@@ -15,3 +15,6 @@ node_modules/
 
 # Python test cache
 __pycache__/
+
+# Local planning/design notes (not published)
+docs/superpowers/
