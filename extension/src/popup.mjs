@@ -40,6 +40,37 @@ function setText(element, text) {
   }
 }
 
+function setPageContext(url) {
+  const context = $('page-context');
+  const pageUrl = $('page-url');
+  if (!context || !pageUrl) {
+    return;
+  }
+
+  if (!url) {
+    context.textContent = 'New bookmark';
+    pageUrl.textContent = 'Open a page to save it.';
+    return;
+  }
+
+  try {
+    const parsed = new URL(url);
+    context.textContent = parsed.hostname.replace(/^www\./, '');
+    pageUrl.textContent = parsed.pathname === '/' ? parsed.origin : parsed.href;
+  } catch {
+    context.textContent = 'Current page';
+    pageUrl.textContent = url;
+  }
+}
+
+function setPageState(text) {
+  const badge = $('page-state');
+  if (badge) {
+    badge.textContent = text ?? '';
+    badge.hidden = !text;
+  }
+}
+
 async function init() {
   bindEvents();
 
@@ -263,6 +294,8 @@ async function loadCurrentTab() {
   }
 
   state.currentTab = tab;
+  setPageContext(tab.url);
+
   if (!state.client) {
     resetAddForm(tab.url, tab.title);
     return;
@@ -304,6 +337,7 @@ function populateAddForm(bookmark, fallbackUrl, fallbackTitle) {
   save.disabled = false;
   setVisible($('delete-bookmark'), true);
   setBookmarkStatus('This page is already saved.');
+  setPageState('Saved');
   applyBookmarkFolder(bookmark);
 }
 
@@ -318,6 +352,7 @@ function resetAddForm(url, title) {
   $('save-bookmark').disabled = false;
   setVisible($('delete-bookmark'), false);
   setBookmarkStatus('');
+  setPageState('');
   hideTagSuggestions();
 
   const select = $('bookmark-folder');
@@ -393,6 +428,7 @@ async function saveBookmark() {
     button.textContent = 'Update';
     setVisible($('delete-bookmark'), true);
     setBookmarkStatus('This page is already saved.');
+    setPageState('Saved');
 
     if (!$('bookmark-folder').disabled) {
       state.loadedFolderValue = $('bookmark-folder').value;
@@ -447,6 +483,7 @@ async function confirmDelete() {
       $('save-bookmark').textContent = 'Save';
       setVisible($('delete-bookmark'), false);
       setBookmarkStatus('');
+      setPageState('');
       await loadCurrentTab();
     }
 

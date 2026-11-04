@@ -7,118 +7,137 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <header class="app-header">
-    <div class="brand">
-      <img src="icons/icon-32.png" alt="" width="24" height="24">
-      <div>
-        <h1>Nextcloud Bookmarks</h1>
-        <p class="brand-subtitle">Unofficial Firefox client</p>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="rail-brand" aria-hidden="true">
+        <img src="icons/icon-32.png" alt="" width="30" height="30">
       </div>
-    </div>
-    <button type="button" class="icon-button" id="open-options" title="Settings" aria-label="Settings">
-      <span aria-hidden="true">⚙</span>
-    </button>
-  </header>
 
-  <nav class="tabs" role="tablist" aria-label="Bookmark views">
-    <button type="button" class="tab is-active" id="tab-add" data-tab="add" role="tab" aria-selected="true">Bookmark</button>
-    <button type="button" class="tab" id="tab-search" data-tab="search" role="tab" aria-selected="false">Search</button>
-    <button type="button" class="tab" id="tab-daily" data-tab="daily" role="tab" aria-selected="false">Daily</button>
-  </nav>
+      <nav class="rail-nav" role="tablist" aria-label="Bookmark views">
+        <button type="button" class="rail-item is-active" id="tab-add" data-tab="add" role="tab" aria-selected="true" title="Save bookmark">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v15L12 16.8 4.5 21V6A1.5 1.5 0 0 1 6 4.5Z"/><path d="M9 9h6M9 12.5h4"/></svg>
+          <span>Save</span>
+        </button>
+        <button type="button" class="rail-item" id="tab-search" data-tab="search" role="tab" aria-selected="false" title="Search bookmarks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+          <span>Find</span>
+        </button>
+        <button type="button" class="rail-item" id="tab-daily" data-tab="daily" role="tab" aria-selected="false" title="Daily bookmarks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M8 3.5v4M16 3.5v4M4 10h16M8.5 14h2M13.5 14h2"/></svg>
+          <span>Daily</span>
+        </button>
+      </nav>
 
-  <main>
-    <section class="panel" id="panel-add" role="tabpanel" aria-labelledby="tab-add">
-      <div class="status" id="bookmark-status" hidden></div>
+      <button type="button" class="rail-item rail-settings" id="open-options" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7.4 7.4 0 0 0-.08-1.07l2-1.55-2-3.46-2.36.95a7.2 7.2 0 0 0-1.84-1.07L14.36 3h-4.72l-.36 2.8A7.2 7.2 0 0 0 7.44 6.9L5.08 5.95l-2 3.46 2 1.55A7.4 7.4 0 0 0 5 12c0 .37.03.72.08 1.07l-2 1.55 2 3.46 2.36-.95c.56.45 1.18.81 1.84 1.07L9.64 21h4.72l.36-2.8c.66-.26 1.28-.62 1.84-1.07l2.36.95 2-3.46-2-1.55c.05-.35.08-.7.08-1.07Z"/></svg>
+        <span>Settings</span>
+      </button>
+    </aside>
 
-      <form id="bookmark-form" novalidate>
-        <input type="hidden" id="bookmark-id">
-        <input type="hidden" id="bookmark-url">
-
-        <label class="field">
-          <span>Title</span>
-          <input type="text" id="bookmark-title" autocomplete="off">
-        </label>
-
-        <label class="field">
-          <span>Folder</span>
-          <select id="bookmark-folder">
-            <option value="-1">Root (no folder)</option>
-          </select>
-        </label>
-        <p class="field-note" id="folder-note" hidden></p>
-
-        <div class="tag-wrap">
-          <label class="field">
-            <span>Tags</span>
-            <input type="text" id="bookmark-tags" autocomplete="off" placeholder="tag1, tag2">
-          </label>
-          <ul class="tag-suggestions" id="tag-suggestions" hidden></ul>
+    <div class="workspace">
+      <header class="page-head">
+        <div class="page-meta">
+          <p class="eyebrow">Current page</p>
+          <h1 id="page-context">New bookmark</h1>
+          <p class="page-url" id="page-url"></p>
         </div>
+        <span class="state-badge" id="page-state" hidden>Saved</span>
+      </header>
 
-        <label class="field">
-          <span>Note</span>
-          <textarea id="bookmark-description" rows="3"></textarea>
-        </label>
+      <main class="panels">
+        <section class="panel" id="panel-add" role="tabpanel" aria-labelledby="tab-add">
+          <div class="stamp" id="bookmark-status" hidden></div>
 
-        <div class="form-actions">
-          <button type="button" class="button button-primary" id="save-bookmark">Save</button>
-          <button type="button" class="button button-danger" id="delete-bookmark" hidden>Delete</button>
+          <form id="bookmark-form" novalidate>
+            <input type="hidden" id="bookmark-id">
+            <input type="hidden" id="bookmark-url">
+
+            <label class="field">
+              <span>Title</span>
+              <input type="text" id="bookmark-title" autocomplete="off">
+            </label>
+
+            <div class="field-row">
+              <label class="field">
+                <span>Folder</span>
+                <select id="bookmark-folder">
+                  <option value="-1">Root (no folder)</option>
+                </select>
+              </label>
+              <div class="field tag-wrap">
+                <span class="field-label">Tags</span>
+                <input type="text" id="bookmark-tags" autocomplete="off" placeholder="tag1, tag2">
+                <ul class="tag-suggestions" id="tag-suggestions" hidden></ul>
+              </div>
+            </div>
+            <p class="field-note" id="folder-note" hidden></p>
+
+            <label class="field">
+              <span>Note</span>
+              <textarea id="bookmark-description" rows="3"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button type="button" class="button button-primary" id="save-bookmark">Save</button>
+              <button type="button" class="button button-danger" id="delete-bookmark" hidden>Delete</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
+          <div class="field-row">
+            <label class="field">
+              <span>Terms</span>
+              <input type="text" id="search-terms" autocomplete="off" placeholder="term1, term2">
+            </label>
+            <label class="field">
+              <span>Tags</span>
+              <input type="text" id="search-tags" autocomplete="off" placeholder="tag1, tag2">
+            </label>
+          </div>
+
+          <div class="search-controls">
+            <label class="mini-field">
+              <span>Match</span>
+              <select id="search-conjunction">
+                <option value="and">all</option>
+                <option value="or">any</option>
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="search-no-paging">
+              <span>All results</span>
+            </label>
+            <button type="button" class="button button-primary" id="search-button">Search</button>
+          </div>
+
+          <div class="results" id="search-results"></div>
+        </section>
+
+        <section class="panel" id="panel-daily" role="tabpanel" aria-labelledby="tab-daily" hidden>
+          <p class="panel-hint">Bookmarks tagged <code>daily</code> appear here.</p>
+          <div class="results" id="daily-results"></div>
+        </section>
+      </main>
+
+      <div class="confirm" id="confirm-delete" hidden>
+        <span>Delete this bookmark?</span>
+        <div class="confirm-actions">
+          <button type="button" class="button button-danger button-small" id="confirm-delete-yes">Delete</button>
+          <button type="button" class="button button-quiet button-small" id="confirm-delete-no">Cancel</button>
         </div>
-      </form>
-
-    </section>
-
-    <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
-      <div class="field-row">
-        <label class="field">
-          <span>Terms</span>
-          <input type="text" id="search-terms" autocomplete="off" placeholder="term1, term2">
-        </label>
-        <label class="field">
-          <span>Tags</span>
-          <input type="text" id="search-tags" autocomplete="off" placeholder="tag1, tag2">
-        </label>
       </div>
 
-      <div class="search-options">
-        <label class="inline-field">
-          <span>Match</span>
-          <select id="search-conjunction">
-            <option value="and">all</option>
-            <option value="or">any</option>
-          </select>
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="search-no-paging">
-          <span>All results</span>
-        </label>
-        <button type="button" class="button button-primary" id="search-button">Search</button>
-      </div>
+      <div class="notification" id="notification" hidden aria-live="polite"></div>
 
-      <div class="results" id="search-results"></div>
-    </section>
-
-    <section class="panel" id="panel-daily" role="tabpanel" aria-labelledby="tab-daily" hidden>
-      <p class="panel-hint">Bookmarks tagged <code>daily</code> appear here.</p>
-      <div class="results" id="daily-results"></div>
-    </section>
-  </main>
-
-  <div class="confirm" id="confirm-delete" hidden>
-    <span>Delete this bookmark?</span>
-    <div class="confirm-actions">
-      <button type="button" class="button button-danger button-small" id="confirm-delete-yes">Delete</button>
-      <button type="button" class="button button-quiet button-small" id="confirm-delete-no">Cancel</button>
+      <footer class="statusbar">
+        <a href="#" id="open-bookmarks" class="status-link">Open Nextcloud</a>
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-note">Unofficial client</span>
+        <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer" class="status-link status-source">Source</a>
+      </footer>
     </div>
   </div>
-
-  <div class="notification" id="notification" hidden aria-live="polite"></div>
-
-  <footer class="app-footer">
-    <a href="#" id="open-bookmarks" class="text-link">My bookmarks</a>
-    <span class="footer-separator">·</span>
-    <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer" class="text-link">Source</a>
-  </footer>
 
   <script type="module" src="src/popup.mjs"></script>
 </body>

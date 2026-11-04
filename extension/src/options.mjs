@@ -80,6 +80,26 @@ async function loadSettings() {
       state.client = null;
     }
   }
+
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const target = $('side-server');
+  if (!target) {
+    return;
+  }
+
+  if (!state.settings.serverUrl) {
+    target.textContent = 'Not configured';
+    return;
+  }
+
+  try {
+    target.textContent = new URL(normalizeServerUrl(state.settings.serverUrl)).host;
+  } catch {
+    target.textContent = 'Invalid URL';
+  }
 }
 
 function normalizeSettings(raw) {
@@ -136,6 +156,7 @@ async function saveSettings() {
     username: settings.username,
     password: settings.password
   });
+  updateSidebar();
 
   await refreshPermission();
   await initImport();
