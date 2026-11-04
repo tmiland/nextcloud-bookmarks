@@ -117,19 +117,19 @@
     "message": "Saved in: Root"
   },
   "savedInFolder": {
-    "message": "Saved in: $1"
+    "message": "Saved in: {{1}}"
   },
   "savedInFolders": {
-    "message": "Saved in $1 folders; move it in Nextcloud."
+    "message": "Saved in {{1}} folders; move it in Nextcloud."
   },
   "savedInFolderUnavailable": {
-    "message": "Saved in: $1 (folder list unavailable)"
+    "message": "Saved in: {{1}} (folder list unavailable)"
   },
   "savedInRootAnd": {
     "message": " and Root"
   },
   "folderFallback": {
-    "message": "Folder $1"
+    "message": "Folder {{1}}"
   },
   "alreadySaved": {
     "message": "This page is already saved."
@@ -159,7 +159,7 @@
     "message": "1 bookmark"
   },
   "bookmarkCountMany": {
-    "message": "$1 bookmarks"
+    "message": "{{1}} bookmarks"
   },
   "serverError": {
     "message": "Server error."
@@ -189,10 +189,10 @@
     "message": "Bookmarks API not found. Is the Nextcloud Bookmarks app installed?"
   },
   "errorServerWithDetail": {
-    "message": "Server error: $1"
+    "message": "Server error: {{1}}"
   },
   "errorServerStatus": {
-    "message": "Server error (HTTP $1)."
+    "message": "Server error (HTTP {{1}})."
   },
   "errorNetwork": {
     "message": "Could not reach the Nextcloud server. Check the URL and your connection."
@@ -306,10 +306,10 @@
     "message": "MIT licensed."
   },
   "accessGranted": {
-    "message": "Access to $1 is granted."
+    "message": "Access to {{1}} is granted."
   },
   "accessNeeded": {
-    "message": "This extension needs access to $1 to read and save bookmarks."
+    "message": "This extension needs access to {{1}} to read and save bookmarks."
   },
   "enterServerUrl": {
     "message": "Enter your Nextcloud server URL."
@@ -348,28 +348,28 @@
     "message": "(untitled folder)"
   },
   "couldNotLoadFolders": {
-    "message": "Could not load Nextcloud folders: $1"
+    "message": "Could not load Nextcloud folders: {{1}}"
   },
   "couldNotReadBookmarks": {
-    "message": "Could not read Firefox bookmarks: $1"
+    "message": "Could not read Firefox bookmarks: {{1}}"
   },
   "saveSettingsFirst": {
     "message": "Save the settings first."
   },
   "previewFound": {
-    "message": "Found $1 bookmarks: $2 new, $3 already in Nextcloud, $4 unsupported."
+    "message": "Found {{1}} bookmarks: {{2}} new, {{3}} already in Nextcloud, {{4}} unsupported."
   },
   "previewFailed": {
-    "message": "Preview failed: $1"
+    "message": "Preview failed: {{1}}"
   },
   "importingProgress": {
-    "message": "Importing $1 of $2…"
+    "message": "Importing {{1}} of {{2}}…"
   },
   "importCancelled": {
     "message": "Import cancelled. "
   },
   "importSummary": {
-    "message": "Imported $1, skipped $2, failed $3."
+    "message": "Imported {{1}}, skipped {{2}}, failed {{3}}."
   },
   "cancelling": {
     "message": "Cancelling…"
@@ -510,13 +510,13 @@
     "message": "Rename"
   },
   "folderCount": {
-    "message": "$1 folders"
+    "message": "{{1}} folders"
   },
   "withRoot": {
-    "message": "$1 + Root"
+    "message": "{{1}} + Root"
   },
   "folderUnavailableLabel": {
-    "message": "Folder $1 (unavailable)"
+    "message": "Folder {{1}} (unavailable)"
   },
   "selectFolders": {
     "message": "Select folders"
@@ -537,7 +537,7 @@
     "message": "Recreate folder structure"
   },
   "previewFolders": {
-    "message": "$1 new folders will be created."
+    "message": "{{1}} new folders will be created."
   },
   "resumeImport": {
     "message": "Resume import"
@@ -546,7 +546,7 @@
     "message": "Discard"
   },
   "importJobPending": {
-    "message": "$1 of $2 bookmarks remaining."
+    "message": "{{1}} of {{2}} bookmarks remaining."
   },
   "importCancelledResume": {
     "message": "Import cancelled. You can resume it."
@@ -558,6 +558,6 @@
     "message": "Resuming import…"
   },
   "importFoldersCreated": {
-    "message": "$1 folders created."
+    "message": "{{1}} folders created."
   }
 }

@@ -117,19 +117,19 @@
     "message": "Lagret i: Rot"
   },
   "savedInFolder": {
-    "message": "Lagret i: $1"
+    "message": "Lagret i: {{1}}"
   },
   "savedInFolders": {
-    "message": "Lagret i $1 mapper; flytt det i Nextcloud."
+    "message": "Lagret i {{1}} mapper; flytt det i Nextcloud."
   },
   "savedInFolderUnavailable": {
-    "message": "Lagret i: $1 (mappelisten er utilgjengelig)"
+    "message": "Lagret i: {{1}} (mappelisten er utilgjengelig)"
   },
   "savedInRootAnd": {
     "message": " og Rot"
   },
   "folderFallback": {
-    "message": "Mappe $1"
+    "message": "Mappe {{1}}"
   },
   "alreadySaved": {
     "message": "Denne siden er allerede lagret."
@@ -159,7 +159,7 @@
     "message": "1 bokmerke"
   },
   "bookmarkCountMany": {
-    "message": "$1 bokmerker"
+    "message": "{{1}} bokmerker"
   },
   "serverError": {
     "message": "Serverfeil."
@@ -189,10 +189,10 @@
     "message": "Bookmarks-API-et ble ikke funnet. Er Nextcloud Bookmarks-appen installert?"
   },
   "errorServerWithDetail": {
-    "message": "Serverfeil: $1"
+    "message": "Serverfeil: {{1}}"
   },
   "errorServerStatus": {
-    "message": "Serverfeil (HTTP $1)."
+    "message": "Serverfeil (HTTP {{1}})."
   },
   "errorNetwork": {
     "message": "Kunne ikke nå Nextcloud-serveren. Kontroller URL-en og tilkoblingen."
@@ -306,10 +306,10 @@
     "message": "MIT-lisensiert."
   },
   "accessGranted": {
-    "message": "Tilgang til $1 er gitt."
+    "message": "Tilgang til {{1}} er gitt."
   },
   "accessNeeded": {
-    "message": "Denne utvidelsen trenger tilgang til $1 for å lese og lagre bokmerker."
+    "message": "Denne utvidelsen trenger tilgang til {{1}} for å lese og lagre bokmerker."
   },
   "enterServerUrl": {
     "message": "Angi Nextcloud-serveradressen."
@@ -348,28 +348,28 @@
     "message": "(mappe uten navn)"
   },
   "couldNotLoadFolders": {
-    "message": "Kunne ikke laste Nextcloud-mapper: $1"
+    "message": "Kunne ikke laste Nextcloud-mapper: {{1}}"
   },
   "couldNotReadBookmarks": {
-    "message": "Kunne ikke lese Firefox-bokmerker: $1"
+    "message": "Kunne ikke lese Firefox-bokmerker: {{1}}"
   },
   "saveSettingsFirst": {
     "message": "Lagre innstillingene først."
   },
   "previewFound": {
-    "message": "Fant $1 bokmerker: $2 nye, $3 allerede i Nextcloud, $4 ikke støttet."
+    "message": "Fant {{1}} bokmerker: {{2}} nye, {{3}} allerede i Nextcloud, {{4}} ikke støttet."
   },
   "previewFailed": {
-    "message": "Forhåndsvisning mislyktes: $1"
+    "message": "Forhåndsvisning mislyktes: {{1}}"
   },
   "importingProgress": {
-    "message": "Importerer $1 av $2…"
+    "message": "Importerer {{1}} av {{2}}…"
   },
   "importCancelled": {
     "message": "Importen ble avbrutt. "
   },
   "importSummary": {
-    "message": "Importerte $1, hoppet over $2, mislyktes $3."
+    "message": "Importerte {{1}}, hoppet over {{2}}, mislyktes {{3}}."
   },
   "cancelling": {
     "message": "Avbryter…"
@@ -510,13 +510,13 @@
     "message": "Gi nytt navn"
   },
   "folderCount": {
-    "message": "$1 mapper"
+    "message": "{{1}} mapper"
   },
   "withRoot": {
-    "message": "$1 + Rot"
+    "message": "{{1}} + Rot"
   },
   "folderUnavailableLabel": {
-    "message": "Mappe $1 (utilgjengelig)"
+    "message": "Mappe {{1}} (utilgjengelig)"
   },
   "selectFolders": {
     "message": "Velg mapper"
@@ -537,7 +537,7 @@
     "message": "Gjenskap mappestruktur"
   },
   "previewFolders": {
-    "message": "$1 nye mapper opprettes."
+    "message": "{{1}} nye mapper opprettes."
   },
   "resumeImport": {
     "message": "Fortsett import"
@@ -546,7 +546,7 @@
     "message": "Forkast"
   },
   "importJobPending": {
-    "message": "$1 av $2 bokmerker gjenstår."
+    "message": "{{1}} av {{2}} bokmerker gjenstår."
   },
   "importCancelledResume": {
     "message": "Importen ble avbrutt. Du kan fortsette den."
@@ -558,6 +558,6 @@
     "message": "Fortsetter importen…"
   },
   "importFoldersCreated": {
-    "message": "$1 mapper opprettet."
+    "message": "{{1}} mapper opprettet."
   }
 }

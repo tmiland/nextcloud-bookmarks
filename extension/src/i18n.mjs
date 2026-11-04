@@ -7,7 +7,7 @@ function replacePlaceholders(message, substitutions) {
   const values = Array.isArray(substitutions) ? substitutions : [substitutions];
   let result = message;
   values.forEach((value, index) => {
-    result = result.split(`$${index + 1}`).join(String(value));
+    result = result.split(`{{${index + 1}}}`).join(String(value));
   });
   return result;
 }

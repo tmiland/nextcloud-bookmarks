@@ -58,7 +58,7 @@ test('t applies positional substitutions', async () => {
   globalThis.browser = {
     i18n: {
       getMessage(key) {
-        return key === 'greeting' ? 'Hello $1' : '';
+        return key === 'greeting' ? 'Hello {{1}}' : '';
       }
     }
   };
