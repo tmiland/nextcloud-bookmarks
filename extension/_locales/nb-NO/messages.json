@@ -288,7 +288,7 @@
     "message": "Nextcloud-mappe"
   },
   "importExistingHint": {
-    "message": "Eksisterende URL-er hoppes over. Firefox-mapper flates ut i den valgte Nextcloud-mappen. Dette oppretter ikke Nextcloud-mapper."
+    "message": "Eksisterende URL-er hoppes over. Med gjenskapning av mapper bygges Firefox-mappestrukturen opp i Nextcloud; ellers havner alt i den valgte mappen."
   },
   "preview": {
     "message": "Forhåndsvis"
@@ -532,5 +532,32 @@
   },
   "noFolders": {
     "message": "Ingen mapper ennå."
+  },
+  "recreateFolders": {
+    "message": "Gjenskap mappestruktur"
+  },
+  "previewFolders": {
+    "message": "$1 nye mapper opprettes."
+  },
+  "resumeImport": {
+    "message": "Fortsett import"
+  },
+  "discardImport": {
+    "message": "Forkast"
+  },
+  "importJobPending": {
+    "message": "$1 av $2 bokmerker gjenstår."
+  },
+  "importCancelledResume": {
+    "message": "Importen ble avbrutt. Du kan fortsette den."
+  },
+  "importJobDiscarded": {
+    "message": "Importfremdriften er forkastet."
+  },
+  "importResumed": {
+    "message": "Fortsetter importen…"
+  },
+  "importFoldersCreated": {
+    "message": "$1 mapper opprettet."
   }
 }

@@ -59,7 +59,16 @@ function storageApi(initial) {
   };
 }
 
-async function loadOptions() {
+function findNode(nodes, id) {
+  for (const node of nodes || []) {
+    if (node.id === id) return node;
+    const found = findNode(node.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function loadOptions({ tree = [], importJob = null } = {}) {
   const dom = new JSDOM(optionsHtml, {
     url: 'moz-extension://test/options.html',
     pretendToBeVisual: true
@@ -86,7 +95,8 @@ async function loadOptions() {
           username: 'test',
           password: 'secret',
           searchMainTab: false
-        }
+        },
+        ...(importJob ? { importJob } : {})
       })
     },
     permissions: {
@@ -99,7 +109,11 @@ async function loadOptions() {
     },
     bookmarks: {
       async getTree() {
-        return [];
+        return tree;
+      },
+      async getSubTree(id) {
+        const node = findNode(tree, id);
+        return node ? [node] : [];
       }
     },
     runtime: {
@@ -199,6 +213,104 @@ test('creates a folder from the settings page', async () => {
     const body = new URLSearchParams(post.options.body);
     assert.equal(body.get('title'), 'Settings Folder');
     assert.equal(body.get('parent_folder'), '10');
+  } finally {
+    options.cleanup();
+  }
+});
+
+test('previews and imports a Firefox folder tree with folder recreation', async () => {
+  const tree = [{
+    type: 'folder',
+    id: 'root________',
+    title: '',
+    children: [{
+      type: 'folder',
+      id: 'toolbar_____',
+      title: 'Bookmarks Toolbar',
+      children: [{
+        type: 'folder',
+        id: 'import-test',
+        title: 'Import Test',
+        children: [
+          {
+            type: 'bookmark',
+            id: 'b1',
+            title: 'Firefox One',
+            url: 'https://firefox-one.example/'
+          },
+          {
+            type: 'folder',
+            id: 'nested',
+            title: 'Nested',
+            children: [{
+              type: 'bookmark',
+              id: 'b2',
+              title: 'Firefox Two',
+              url: 'https://firefox-two.example/'
+            }]
+          }
+        ]
+      }]
+    }]
+  }];
+
+  const options = await loadOptions({ tree });
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => [...document.getElementById('firefox-folder').options]
+      .some((option) => option.value === 'import-test'));
+
+    document.getElementById('firefox-folder').value = 'import-test';
+    document.getElementById('import-folder').value = '10';
+    document.getElementById('import-recreate-folders').checked = true;
+    document.getElementById('preview-import').click();
+
+    await waitFor(() => document.getElementById('import-status').textContent.includes('2 new'));
+    assert.match(document.getElementById('import-status').textContent, /1 new folders/);
+
+    document.getElementById('start-import').click();
+    await waitFor(() => document.getElementById('import-status').textContent.includes('Imported 2'), 8000);
+
+    const state = await realFetch(base + '/__state').then((response) => response.json());
+    const nested = state.folders.find((folder) => folder.title === 'Nested' && folder.parent_folder === 10);
+    assert.ok(nested);
+    const one = state.bookmarks.find((bookmark) => bookmark.url === 'https://firefox-one.example/');
+    const two = state.bookmarks.find((bookmark) => bookmark.url === 'https://firefox-two.example/');
+    assert.deepEqual(one.folders, [10]);
+    assert.deepEqual(two.folders, [nested.id]);
+    assert.equal(document.getElementById('import-job').hidden, true);
+  } finally {
+    options.cleanup();
+  }
+});
+
+test('shows and discards a persisted import job', async () => {
+  const account = `${base}|test`;
+  const importJob = {
+    account,
+    items: [
+      { url: 'https://one.example/', title: 'One', path: [] },
+      { url: 'https://two.example/', title: 'Two', path: [] }
+    ],
+    folderPlans: [],
+    destinationId: -1,
+    folderIds: {},
+    completed: [0],
+    created: 1,
+    skipped: 0,
+    failed: 0,
+    errors: []
+  };
+
+  const options = await loadOptions({ importJob });
+  try {
+    const document = options.dom.window.document;
+    await waitFor(() => document.getElementById('import-job').hidden === false);
+    assert.match(document.getElementById('import-job-text').textContent, /1 of 2 bookmarks remaining/);
+
+    document.getElementById('discard-import').click();
+    await waitFor(() => document.getElementById('import-job').hidden === true);
+    assert.match(document.getElementById('import-status').textContent, /discarded/);
   } finally {
     options.cleanup();
   }

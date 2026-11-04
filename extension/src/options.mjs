@@ -1,5 +1,14 @@
 import { cacheKey, writeCache } from './cache.mjs';
 import { createFolder, fetchFolders, renameFolder } from './folders.mjs';
+import {
+  clearImportJob,
+  countMissingFolders,
+  ensureImportFolders,
+  loadImportJob,
+  planImport,
+  runImport,
+  saveImportJob
+} from './import.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
 import {
   accountKey,
@@ -13,7 +22,6 @@ import {
 import {
   buildFolderTree,
   formatError,
-  isSupportedUrl,
   normalizeUrlForCompare
 } from './utils.mjs';
 
@@ -27,7 +35,8 @@ const state = {
   account: '',
   folders: [],
   allFolders: [],
-  renamingFolderId: null
+  renamingFolderId: null,
+  importJob: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -74,7 +83,14 @@ function bindEvents() {
     state.cancelled = true;
     setImportStatus(t('cancelling'));
   });
+  $('resume-import').addEventListener('click', resumeImportJob);
+  $('discard-import').addEventListener('click', discardImportJob);
   $('firefox-folder').addEventListener('change', () => {
+    state.importPreview = null;
+    $('start-import').disabled = true;
+    setImportStatus(t('chooseFirefoxFolder'));
+  });
+  $('import-recreate-folders').addEventListener('change', () => {
     state.importPreview = null;
     $('start-import').disabled = true;
     setImportStatus(t('chooseFirefoxFolder'));
@@ -426,6 +442,7 @@ async function initImport() {
   setVisible($('import-permission'), false);
   setVisible($('import-controls'), true);
   await loadImportFolders();
+  await refreshImportJob();
   setImportStatus(t('chooseFirefoxFolder'));
 }
 
@@ -501,32 +518,49 @@ function populateFirefoxFolders(tree) {
   select.value = toolbar ? 'toolbar_____' : 'all';
 }
 
-async function collectFirefoxBookmarks(folderId) {
+async function getFirefoxTree(folderId) {
   const tree = folderId === 'all'
     ? await api.bookmarks.getTree()
     : await api.bookmarks.getSubTree(folderId);
+  return Array.isArray(tree) ? tree : [tree];
+}
 
-  const nodes = Array.isArray(tree) ? tree : [tree];
-  const items = [];
-  let skipped = 0;
+function importAccount() {
+  return accountKey(state.settings.serverUrl, state.settings.username);
+}
 
-  function walk(children) {
-    for (const node of children) {
-      if (node.type === 'bookmark' && node.url) {
-        if (isSupportedUrl(node.url)) {
-          items.push({ url: node.url, title: node.title || node.url });
-        } else {
-          skipped++;
-        }
-      }
-      if (node.children) {
-        walk(node.children);
-      }
-    }
+async function refreshImportJob() {
+  if (!state.settings.serverUrl) {
+    state.importJob = null;
+    renderImportJob(null);
+    return;
   }
 
-  walk(nodes);
-  return { items, skipped };
+  const job = await loadImportJob(api, importAccount());
+  state.importJob = job;
+  renderImportJob(job);
+}
+
+function renderImportJob(job) {
+  const box = $('import-job');
+  if (!box) {
+    return;
+  }
+
+  if (!job || !Array.isArray(job.items)) {
+    setVisible(box, false);
+    return;
+  }
+
+  const done = new Set(job.completed || []);
+  const remaining = job.items.length - done.size;
+  if (remaining <= 0) {
+    setVisible(box, false);
+    return;
+  }
+
+  setVisible(box, true);
+  setText($('import-job-text'), t('importJobPending', [remaining, job.items.length]));
 }
 
 async function previewImport() {
@@ -537,12 +571,21 @@ async function previewImport() {
 
   try {
     const folderId = $('firefox-folder').value;
-    const collected = await collectFirefoxBookmarks(folderId);
+    const destinationId = Number($('import-folder').value);
+    const recreateFolders = $('import-recreate-folders').checked;
+    const firefoxTree = await getFirefoxTree(folderId);
+    const plan = planImport({
+      firefoxTree,
+      selectedFolderId: folderId,
+      destinationId,
+      recreateFolders,
+      existingFolders: state.folders
+    });
     const existing = await state.client.getExistingUrlSet();
 
     const newItems = [];
     let duplicates = 0;
-    for (const item of collected.items) {
+    for (const item of plan.items) {
       if (existing.has(normalizeUrlForCompare(item.url))) {
         duplicates++;
       } else {
@@ -550,14 +593,25 @@ async function previewImport() {
       }
     }
 
-    state.importPreview = { items: newItems };
+    const missingFolders = recreateFolders
+      ? countMissingFolders(state.folders, plan.folderPlans, destinationId)
+      : 0;
+
+    state.importPreview = {
+      items: newItems,
+      folderPlans: plan.folderPlans,
+      destinationId,
+      recreateFolders,
+      missingFolders
+    };
     $('start-import').disabled = newItems.length === 0;
 
-    const total = newItems.length + duplicates + collected.skipped;
-    setImportStatus(
-      t('previewFound', [total, newItems.length, duplicates, collected.skipped]),
-      newItems.length ? '' : 'error'
-    );
+    const total = plan.items.length + plan.skipped;
+    let status = t('previewFound', [total, newItems.length, duplicates, plan.skipped]);
+    if (recreateFolders) {
+      status += ` ${t('previewFolders', [missingFolders])}`;
+    }
+    setImportStatus(status, newItems.length ? '' : 'error');
   } catch (error) {
     state.importPreview = null;
     $('start-import').disabled = true;
@@ -565,81 +619,145 @@ async function previewImport() {
   }
 }
 
+function setImportBusy(busy) {
+  $('start-import').disabled = busy || !state.importPreview?.items.length;
+  $('preview-import').disabled = busy;
+  $('cancel-import').hidden = !busy;
+  $('firefox-folder').disabled = busy;
+  $('import-folder').disabled = busy;
+  $('import-recreate-folders').disabled = busy;
+}
+
 async function startImport() {
   if (!state.client || !state.importPreview?.items.length) {
     return;
   }
 
-  const items = state.importPreview.items;
-  const folderValue = $('import-folder').value;
-  const folders = folderValue === '-1' ? [] : [Number(folderValue)];
-  const progress = $('import-progress');
-  const startButton = $('start-import');
-  const previewButton = $('preview-import');
-  const cancelButton = $('cancel-import');
-  const firefoxSelect = $('firefox-folder');
-  const importSelect = $('import-folder');
+  const preview = state.importPreview;
+  state.importPreview = null;
+  const job = {
+    account: importAccount(),
+    items: preview.items,
+    folderPlans: preview.folderPlans,
+    destinationId: preview.destinationId,
+    recreateFolders: preview.recreateFolders,
+    folderIds: {},
+    completed: [],
+    created: 0,
+    skipped: 0,
+    failed: 0,
+    errors: [],
+    createdFolders: preview.missingFolders || 0,
+    createdAt: Date.now()
+  };
+  await runImportJob(job);
+}
 
-  let created = 0;
-  let skipped = 0;
-  let failed = 0;
-  const errors = [];
+async function runImportJob(job) {
+  const progress = $('import-progress');
 
   state.cancelled = false;
-  startButton.disabled = true;
-  previewButton.disabled = true;
-  cancelButton.hidden = false;
-  firefoxSelect.disabled = true;
-  importSelect.disabled = true;
+  setImportBusy(true);
   progress.hidden = false;
-  progress.max = items.length;
-  progress.value = 0;
+  progress.max = job.items.length;
+  progress.value = (job.completed || []).length;
 
-  for (let index = 0; index < items.length; index++) {
-    if (state.cancelled) {
-      break;
-    }
+  try {
+    await saveImportJob(api, job);
+  } catch {
+    // The import can still run; resume is best effort.
+  }
+  state.importJob = job;
+  renderImportJob(job);
 
-    try {
-      await state.client.createBookmark({
-        url: items[index].url,
-        title: items[index].title,
-        description: '',
-        tags: [],
-        folders
-      });
-      created++;
-    } catch (error) {
-      const detail = error.data?.data ?? error.data?.message;
-      const text = Array.isArray(detail) ? detail.join(' ') : String(detail ?? '');
-      if (/already exists|exists/i.test(text)) {
-        skipped++;
-      } else {
-        failed++;
-        if (errors.length < 3) {
-          errors.push(formatError(error, t));
-        }
+  let ensured;
+  try {
+    ensured = await ensureImportFolders({
+      client: state.client,
+      folders: state.folders,
+      plans: job.folderPlans || [],
+      destinationId: job.destinationId ?? -1
+    });
+  } catch (error) {
+    setImportStatus(formatError(error, t), 'error');
+    setImportBusy(false);
+    return;
+  }
+
+  state.folders = ensured.folders;
+  job.folderIds = Object.fromEntries(ensured.folderIds);
+  try {
+    await saveImportJob(api, job);
+  } catch {
+    // Resume will re-create only missing folders.
+  }
+
+  let lastSave = 0;
+  const result = await runImport({
+    client: state.client,
+    job,
+    concurrency: 5,
+    shouldCancel: () => state.cancelled,
+    onProgress: (current) => {
+      progress.value = current.completed.length;
+      setImportStatus(t('importingProgress', [current.completed.length, current.items.length]));
+      const now = Date.now();
+      if (now - lastSave > 250) {
+        lastSave = now;
+        void saveImportJob(api, current);
       }
     }
+  });
 
-    progress.value = index + 1;
-    setImportStatus(t('importingProgress', [index + 1, items.length]));
-    await new Promise((resolve) => window.setTimeout(resolve, 75));
+  progress.value = job.items.length;
+
+  if (result.remaining === 0) {
+    try {
+      await clearImportJob(api);
+    } catch {
+      // A stale completed job is harmless.
+    }
+    state.importJob = null;
+    renderImportJob(null);
+  } else {
+    try {
+      await saveImportJob(api, job);
+    } catch {
+      // The in-memory job still lets the user resume this session.
+    }
+    state.importJob = job;
+    renderImportJob(job);
   }
 
-  cancelButton.hidden = true;
-  previewButton.disabled = false;
-  startButton.disabled = true;
-  firefoxSelect.disabled = false;
-  importSelect.disabled = false;
-  state.importPreview = null;
+  setImportBusy(false);
 
-  let summary = `${state.cancelled ? t('importCancelled') : ''}${t('importSummary', [created, skipped, failed])}`;
-  if (errors.length) {
-    summary += ` ${errors.join(' ')}`;
+  let summary = `${result.cancelled ? t('importCancelled') : ''}${t('importSummary', [result.created, result.skipped, result.failed])}`;
+  if (job.createdFolders) {
+    summary = `${t('importFoldersCreated', [job.createdFolders])} ${summary}`;
+  }
+  if (result.errors?.length) {
+    summary += ` ${result.errors.join(' ')}`;
+  }
+  if (result.remaining > 0) {
+    summary += ` ${t('importCancelledResume')}`;
   }
 
-  setImportStatus(summary, failed ? 'error' : 'success');
+  setImportStatus(summary, result.failed || result.remaining > 0 ? 'error' : 'success');
+}
+
+async function resumeImportJob() {
+  if (!state.importJob) {
+    return;
+  }
+  setImportStatus(t('importResumed'));
+  await runImportJob(state.importJob);
+}
+
+async function discardImportJob() {
+  await clearImportJob(api);
+  state.importJob = null;
+  renderImportJob(null);
+  setImportStatus(t('importJobDiscarded'));
 }
 
 function setImportStatus(message, type = '') {

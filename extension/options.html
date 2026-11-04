@@ -152,9 +152,22 @@
             </label>
           </div>
 
+          <label class="check">
+            <input type="checkbox" id="import-recreate-folders" checked>
+            <span data-i18n="recreateFolders">Recreate folder structure</span>
+          </label>
+
           <p class="hint">
-            <span data-i18n="importExistingHint">Existing URLs are skipped. Firefox folders are flattened into the selected Nextcloud folder. This does not create Nextcloud folders.</span>
+            <span data-i18n="importExistingHint">Existing URLs are skipped. With folder recreation on, the Firefox folder tree is rebuilt in Nextcloud; otherwise everything goes into the selected folder.</span>
           </p>
+
+          <div class="import-job" id="import-job" hidden>
+            <p id="import-job-text"></p>
+            <div class="actions">
+              <button type="button" class="button button-primary button-small" id="resume-import" data-i18n="resumeImport">Resume import</button>
+              <button type="button" class="button button-quiet button-small" id="discard-import" data-i18n="discardImport">Discard</button>
+            </div>
+          </div>
 
           <div class="actions">
             <button type="button" class="button" id="preview-import" data-i18n="preview">Preview</button>
