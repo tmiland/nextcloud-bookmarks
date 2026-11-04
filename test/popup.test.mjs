@@ -186,6 +186,7 @@ async function loadPopup({
 
   const module = await import(`../extension/src/popup.mjs?dom=${moduleCounter}`);
   await waitFor(() => dom.window.document.getElementById('bookmark-title'));
+  await waitFor(() => module.state.initialized);
 
   const cleanup = () => {
     dom.window.close();

@@ -47,7 +47,8 @@ const state = {
   searchSource: 'server',
   editingFromSearch: false,
   formTouched: false,
-  folderSelectionInitialized: false
+  folderSelectionInitialized: false,
+  initialized: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1229,7 +1230,11 @@ function applyMainTab() {
 }
 
 init()
-  .then(applyMainTab)
+  .then(() => {
+    applyMainTab();
+    state.initialized = true;
+    document.body.dataset.ready = '1';
+  })
   .catch((error) => notify(formatError(error, t), 'error'));
 
 export { state };
