@@ -1,4 +1,4 @@
-# AMO listing — Nextcloud Bookmarks 0.2.0
+# AMO listing — Nextcloud Bookmarks 1.0.0
 
 This file is the source for the AMO listing and the reviewer notes. It is not
 packaged with the extension.
@@ -104,7 +104,7 @@ product/identity decision for the maintainer.
 - [ ] Confirm the add-on name and trademark position.
 - [ ] Run `npm test`, `npm run lint`, `npm run build`, and
   `npm run test:integration` on the release commit.
-- [ ] Install `web-ext-artifacts/nextcloud_bookmarks-0.2.0.zip` in a fresh
+- [ ] Install `web-ext-artifacts/nextcloud_bookmarks-1.0.0.zip` in a fresh
   Firefox profile and complete the reviewer test plan once by hand.
 - [ ] Tag `v0.2.0`; the release workflow builds and optionally signs it.
 - [ ] Submit/complete the AMO listing with this metadata and the screenshots.
