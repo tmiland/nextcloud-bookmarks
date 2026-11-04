@@ -166,6 +166,30 @@ export class NextcloudClient {
     return this.request('/tag');
   }
 
+  async createFolder({ title, parent_folder = -1 }) {
+    return this.request('/folder', {
+      method: 'POST',
+      body: toParams({ title, parent_folder })
+    });
+  }
+
+  async updateFolder(id, { title, parent_folder }) {
+    return this.request(`/folder/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: toParams({ title, parent_folder })
+    });
+  }
+
+  async getFolder(id) {
+    return this.request(`/folder/${encodeURIComponent(id)}`);
+  }
+
+  async getFolderHash(id, fields = ['title', 'url']) {
+    return this.request(`/folder/${encodeURIComponent(id)}/hash`, {
+      params: toParams({ fields })
+    });
+  }
+
   async getExistingUrlSet() {
     const result = await this.getAllBookmarks();
     const urls = new Set();

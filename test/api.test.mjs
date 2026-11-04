@@ -150,3 +150,25 @@ test('getExistingUrlSet normalizes URLs', async () => {
   assert.equal(urls.has('https://example.com'), true);
   assert.equal(urls.has('https://example.com/path'), true);
 });
+
+test('createFolder posts the title and parent folder', async () => {
+  const calls = captureFetch(jsonResponse({ status: 'success', item: { id: 5 } }));
+  await client().createFolder({ title: 'New folder', parent_folder: 10 });
+
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(new URL(calls[0].url).pathname, '/nextcloud/index.php/apps/bookmarks/public/rest/v2/folder');
+  const body = new URLSearchParams(calls[0].options.body);
+  assert.equal(body.get('title'), 'New folder');
+  assert.equal(body.get('parent_folder'), '10');
+});
+
+test('updateFolder uses PUT and the folder id', async () => {
+  const calls = captureFetch(jsonResponse({ status: 'success', item: { id: 5 } }));
+  await client().updateFolder(5, { title: 'Renamed', parent_folder: -1 });
+
+  assert.equal(calls[0].options.method, 'PUT');
+  assert.equal(new URL(calls[0].url).pathname, '/nextcloud/index.php/apps/bookmarks/public/rest/v2/folder/5');
+  const body = new URLSearchParams(calls[0].options.body);
+  assert.equal(body.get('title'), 'Renamed');
+  assert.equal(body.get('parent_folder'), '-1');
+});

@@ -1,13 +1,12 @@
-import { NextcloudClient } from './api.mjs';
+import { fetchFolders } from './folders.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
+import { buildClient, hasHostPermission, loadSettings } from './settings.mjs';
 import {
   buildFolderTree,
   formatDate,
   formatError,
   isSupportedUrl,
   joinTags,
-  normalizeServerUrl,
-  originPattern,
   parseTags
 } from './utils.mjs';
 
@@ -87,25 +86,20 @@ async function init() {
   }
 
   try {
-    state.serverUrl = normalizeServerUrl(state.settings.serverUrl);
+    state.client = buildClient(state.settings);
+    state.serverUrl = state.client.serverUrl;
   } catch (error) {
     notify(error.message, 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
   }
 
-  state.client = new NextcloudClient({
-    serverUrl: state.serverUrl,
-    username: state.settings.username,
-    password: state.settings.password
-  });
-
   const home = $('open-bookmarks');
   if (home) {
     home.href = `${state.serverUrl}/apps/bookmarks/`;
   }
 
-  if (!(await hasHostPermission())) {
+  if (!(await hasHostPermission(api, state.serverUrl))) {
     notify(t('accessRequired'), 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
@@ -115,38 +109,8 @@ async function init() {
   await loadCurrentTab();
 }
 
-async function loadSettings() {
-  try {
-    const result = await api.storage.local.get('settings');
-    return normalizeSettings(result.settings || {});
-  } catch {
-    return normalizeSettings({});
-  }
-}
-
-function normalizeSettings(raw) {
-  return {
-    serverUrl: String(raw.serverUrl ?? ''),
-    username: String(raw.username ?? ''),
-    password: String(raw.password ?? ''),
-    searchMainTab: Boolean(raw.searchMainTab)
-  };
-}
-
 function openOptions() {
   api.runtime.openOptionsPage();
-}
-
-async function hasHostPermission() {
-  if (!state.serverUrl) {
-    return false;
-  }
-
-  try {
-    return await api.permissions.contains({ origins: [originPattern(state.serverUrl)] });
-  } catch {
-    return false;
-  }
 }
 
 async function loadLastFolder() {
@@ -166,19 +130,12 @@ async function loadFolders() {
 
   let list = [];
   try {
-    const result = await state.client.getFolders();
-    list = Array.isArray(result?.data) ? result.data : [];
+    list = await fetchFolders(state.client, state.settings.username);
   } catch {
     list = [];
   }
 
-  const username = String(state.settings.username ?? '').toLowerCase();
-  const own = list.filter((folder) => {
-    if (!folder.userId || !username) {
-      return true;
-    }
-    return String(folder.userId).toLowerCase() === username;
-  });
+  const own = list.filter((folder) => !folder.shared);
 
   state.folders = buildFolderTree(own);
   state.folderById = new Map(state.folders.map((folder) => [folder.id, folder]));

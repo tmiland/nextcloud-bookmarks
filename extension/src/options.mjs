@@ -1,12 +1,18 @@
-import { NextcloudClient } from './api.mjs';
+import { fetchFolders } from './folders.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
+import {
+  buildClient,
+  hasHostPermission,
+  loadSettings as loadStoredSettings,
+  normalizeSettings,
+  requestHostPermission,
+  saveSettings as persistSettings
+} from './settings.mjs';
 import {
   buildFolderTree,
   formatError,
   isSupportedUrl,
-  normalizeServerUrl,
-  normalizeUrlForCompare,
-  originPattern
+  normalizeUrlForCompare
 } from './utils.mjs';
 
 const api = globalThis.browser ?? globalThis.chrome;
@@ -37,7 +43,8 @@ async function init() {
   localizeDocument();
   bindEvents();
   updateVersion();
-  await loadSettings();
+  state.settings = await loadStoredSettings();
+  renderSettings();
   await refreshPermission();
   await initImport();
 }
@@ -60,14 +67,7 @@ function bindEvents() {
   });
 }
 
-async function loadSettings() {
-  try {
-    const result = await api.storage.local.get('settings');
-    state.settings = normalizeSettings(result.settings || {});
-  } catch {
-    state.settings = normalizeSettings({});
-  }
-
+function renderSettings() {
   $('server-url').value = state.settings.serverUrl;
   $('username').value = state.settings.username;
   $('password').value = state.settings.password;
@@ -75,11 +75,7 @@ async function loadSettings() {
 
   if (state.settings.serverUrl) {
     try {
-      state.client = new NextcloudClient({
-        serverUrl: normalizeServerUrl(state.settings.serverUrl),
-        username: state.settings.username,
-        password: state.settings.password
-      });
+      state.client = buildClient(state.settings);
     } catch {
       state.client = null;
     }
@@ -100,7 +96,7 @@ function updateSidebar() {
   }
 
   try {
-    target.textContent = new URL(normalizeServerUrl(state.settings.serverUrl)).host;
+    target.textContent = new URL(buildClient(state.settings).serverUrl).host;
   } catch {
     target.textContent = t('invalidServerUrl');
   }
@@ -113,60 +109,43 @@ function updateVersion() {
   }
 }
 
-function normalizeSettings(raw) {
-  return {
-    serverUrl: String(raw.serverUrl ?? ''),
-    username: String(raw.username ?? ''),
-    password: String(raw.password ?? ''),
-    searchMainTab: Boolean(raw.searchMainTab)
-  };
-}
-
 async function saveSettings() {
-  let serverUrl;
+  let client;
   try {
-    serverUrl = normalizeServerUrl($('server-url').value);
+    client = buildClient({
+      serverUrl: $('server-url').value,
+      username: $('username').value.trim(),
+      password: $('password').value
+    });
   } catch (error) {
     notify(error.message, 'error');
     return;
   }
 
+  const serverUrl = client.serverUrl;
   if (!serverUrl) {
     notify(t('enterServerUrl'), 'error');
     return;
   }
 
-  let pattern;
-  try {
-    pattern = originPattern(serverUrl);
-  } catch {
-    notify(t('invalidServerUrl'), 'error');
-    return;
-  }
+  const granted = await requestHostPermission(api, serverUrl);
 
-  const permissionPromise = requestHostPermission(pattern);
-  const granted = await permissionPromise;
-
-  const settings = {
+  const settings = normalizeSettings({
     serverUrl,
     username: $('username').value.trim(),
     password: $('password').value,
     searchMainTab: $('main-tab').value === 'search'
-  };
+  });
 
   try {
-    await api.storage.local.set({ settings });
+    await persistSettings(api, settings);
   } catch {
     notify(t('couldNotSaveSettings'), 'error');
     return;
   }
 
   state.settings = settings;
-  state.client = new NextcloudClient({
-    serverUrl,
-    username: settings.username,
-    password: settings.password
-  });
+  state.client = buildClient(settings);
   updateSidebar();
 
   await refreshPermission();
@@ -177,10 +156,6 @@ async function saveSettings() {
   } else {
     notify(t('settingsSavedNoAccess'), 'error');
   }
-}
-
-function requestHostPermission(pattern) {
-  return api.permissions.request({ origins: [pattern] }).catch(() => false);
 }
 
 async function refreshPermission() {
@@ -195,18 +170,13 @@ async function refreshPermission() {
 
   let serverUrl;
   try {
-    serverUrl = normalizeServerUrl(state.settings.serverUrl);
+    serverUrl = buildClient(state.settings).serverUrl;
   } catch {
     setVisible(box, false);
     return;
   }
 
-  let granted = false;
-  try {
-    granted = await api.permissions.contains({ origins: [originPattern(serverUrl)] });
-  } catch {
-    granted = false;
-  }
+  const granted = await hasHostPermission(api, serverUrl);
 
   setVisible(box, true);
   if (granted) {
@@ -224,15 +194,15 @@ async function grantHostPermission() {
     return;
   }
 
-  let pattern;
+  let serverUrl;
   try {
-    pattern = originPattern(normalizeServerUrl(state.settings.serverUrl));
+    serverUrl = buildClient(state.settings).serverUrl;
   } catch {
     notify(t('invalidServerUrl'), 'error');
     return;
   }
 
-  const granted = await requestHostPermission(pattern);
+  const granted = await requestHostPermission(api, serverUrl);
   await refreshPermission();
   await initImport();
 
@@ -248,14 +218,7 @@ async function initImport() {
 
   setVisible(card, true);
 
-  let hostGranted = false;
-  try {
-    hostGranted = await api.permissions.contains({
-      origins: [originPattern(normalizeServerUrl(state.settings.serverUrl))]
-    });
-  } catch {
-    hostGranted = false;
-  }
+  const hostGranted = await hasHostPermission(api, state.settings.serverUrl);
 
   if (!hostGranted) {
     setVisible($('import-permission'), false);
@@ -304,15 +267,8 @@ async function loadImportFolders() {
   let hadError = false;
 
   try {
-    const result = await state.client.getFolders();
-    const list = Array.isArray(result?.data) ? result.data : [];
-    const username = String(state.settings.username ?? '').toLowerCase();
-    const own = list.filter((folder) => {
-      if (!folder.userId || !username) {
-        return true;
-      }
-      return String(folder.userId).toLowerCase() === username;
-    });
+    const list = await fetchFolders(state.client, state.settings.username);
+    const own = list.filter((folder) => !folder.shared);
 
     for (const folder of buildFolderTree(own)) {
       const indent = '\u00a0\u00a0'.repeat(folder.depth);
