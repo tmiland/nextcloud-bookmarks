@@ -267,7 +267,7 @@
     "message": "Lagre innstillinger"
   },
   "importSection": {
-    "message": "02 · Import"
+    "message": "03 · Import"
   },
   "importHeading": {
     "message": "Flytt Firefox-bokmerker over"
@@ -475,5 +475,62 @@
   },
   "indexRefreshFailed": {
     "message": "Kunne ikke oppdatere søkeindeksen."
+  },
+  "foldersNav": {
+    "message": "Mapper"
+  },
+  "foldersSection": {
+    "message": "02 · Mapper"
+  },
+  "foldersHeading": {
+    "message": "Dine mapper"
+  },
+  "foldersHint": {
+    "message": "Opprett og gi nytt navn til mapper her. Sletting av mapper gjøres i Nextcloud."
+  },
+  "newFolder": {
+    "message": "Ny mappe"
+  },
+  "createFolder": {
+    "message": "Opprett"
+  },
+  "folderNamePlaceholder": {
+    "message": "Mappenavn"
+  },
+  "folderNameRequired": {
+    "message": "Skriv inn et mappenavn."
+  },
+  "folderCreated": {
+    "message": "Mappen er opprettet."
+  },
+  "folderRenamed": {
+    "message": "Mappen har fått nytt navn."
+  },
+  "renameFolder": {
+    "message": "Gi nytt navn"
+  },
+  "folderCount": {
+    "message": "$1 mapper"
+  },
+  "withRoot": {
+    "message": "$1 + Rot"
+  },
+  "folderUnavailableLabel": {
+    "message": "Mappe $1 (utilgjengelig)"
+  },
+  "selectFolders": {
+    "message": "Velg mapper"
+  },
+  "sharedFolder": {
+    "message": "delt"
+  },
+  "folderCreateFailed": {
+    "message": "Kunne ikke opprette mappen."
+  },
+  "folderRenameFailed": {
+    "message": "Kunne ikke gi mappen nytt navn."
+  },
+  "noFolders": {
+    "message": "Ingen mapper ennå."
   }
 }

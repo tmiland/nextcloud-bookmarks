@@ -54,18 +54,28 @@
             </label>
 
             <div class="field-row">
-              <label class="field">
-                <span data-i18n="folderLabel">Folder</span>
-                <select id="bookmark-folder">
-                  <option value="-1" data-i18n="rootNoFolder">Root (no folder)</option>
-                </select>
-              </label>
+              <div class="field folder-field">
+                <span class="field-label" data-i18n="foldersLabel">Folders</span>
+                <details class="folder-picker" id="folder-picker">
+                  <summary id="folder-summary" data-i18n="selectFolders">Select folders</summary>
+                  <div class="folder-options" id="folder-options"></div>
+                </details>
+                <button type="button" class="button button-quiet button-small" id="new-folder" data-i18n="newFolder">New folder</button>
+              </div>
               <div class="field tag-wrap">
                 <span class="field-label" data-i18n="tagsLabel">Tags</span>
                 <input type="text" id="bookmark-tags" autocomplete="off" data-i18n-placeholder="tagsPlaceholder" placeholder="tag1, tag2">
                 <ul class="tag-suggestions" id="tag-suggestions" hidden></ul>
               </div>
             </div>
+
+            <div class="folder-create" id="folder-create" hidden>
+              <input type="text" id="new-folder-title" autocomplete="off" data-i18n-placeholder="folderNamePlaceholder" placeholder="Folder name">
+              <select id="new-folder-parent"></select>
+              <button type="button" class="button button-primary button-small" id="create-folder" data-i18n="createFolder">Create</button>
+              <button type="button" class="button button-quiet button-small" id="cancel-folder" data-i18n="cancel">Cancel</button>
+            </div>
+
             <p class="field-note" id="folder-note" hidden></p>
 
             <label class="field">

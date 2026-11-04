@@ -104,7 +104,8 @@ export function buildFolderTree(folders) {
         id: folder.id,
         title: folder.title || '(untitled folder)',
         depth,
-        parentFolder: parent
+        parentFolder: parent,
+        shared: Boolean(folder.shared)
       });
       walk(folder.id, depth + 1);
     }
@@ -118,7 +119,8 @@ export function buildFolderTree(folders) {
         id: folder.id,
         title: folder.title || '(untitled folder)',
         depth: 0,
-        parentFolder: folder.parent_folder ?? -1
+        parentFolder: folder.parent_folder ?? -1,
+        shared: Boolean(folder.shared)
       });
     }
   }

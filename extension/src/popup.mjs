@@ -1,5 +1,5 @@
 import { cacheKey, readCache, writeCache } from './cache.mjs';
-import { fetchFolders } from './folders.mjs';
+import { createFolder, fetchFolders } from './folders.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
 import { accountKey, buildClient, hasHostPermission, loadSettings } from './settings.mjs';
 import { searchLocal } from './search.mjs';
@@ -26,7 +26,10 @@ const state = {
   folders: [],
   folderById: new Map(),
   lastFolderId: -1,
-  loadedFolderValue: null,
+  allFolders: [],
+  pickerFolders: [],
+  selectedFolderIds: new Set(),
+  originalFolderIds: new Set(),
   knownTags: [],
   tagIndex: -1,
   pendingDeleteId: null,
@@ -165,13 +168,20 @@ async function loadLastFolder() {
 }
 
 function applyFolders(list) {
-  const own = (list || []).filter((folder) => !folder.shared);
-  state.folders = buildFolderTree(own);
-  state.folderById = new Map(state.folders.map((folder) => [folder.id, folder]));
-  populateFolderSelect();
+  state.allFolders = Array.isArray(list) ? list.slice() : [];
+  state.pickerFolders = buildFolderTree(state.allFolders);
+  state.folders = buildFolderTree(state.allFolders.filter((folder) => !folder.shared));
+  state.folderById = new Map(state.pickerFolders.map((folder) => [folder.id, folder]));
   populateSearchFolderSelect();
-  if (state.currentBookmark) {
-    applyBookmarkFolder(state.currentBookmark);
+  if (!state.selectedFolderIds.size) {
+    if (state.currentBookmark) {
+      setSelectedFolders(state.currentBookmark.folders);
+    } else {
+      applyDefaultFolders();
+    }
+  } else {
+    renderFolderPicker();
+    updateFolderSummary();
   }
 }
 
@@ -209,27 +219,6 @@ function populateSearchFolderSelect() {
     : '';
 }
 
-function populateFolderSelect() {
-  const select = $('bookmark-folder');
-  if (!select) {
-    return;
-  }
-
-  select.replaceChildren();
-  select.append(new Option(t('rootNoFolder'), '-1'));
-
-  for (const folder of state.folders) {
-    const indent = '\u00a0\u00a0'.repeat(folder.depth);
-    select.append(new Option(`${indent}${folder.title}`, String(folder.id)));
-  }
-
-  const desired = String(state.lastFolderId);
-  const exists = Array.from(select.options).some((option) => option.value === desired);
-  select.value = exists ? desired : '-1';
-  select.disabled = false;
-  state.loadedFolderValue = null;
-}
-
 function folderLabel(id) {
   const numeric = Number(id);
   if (!Number.isFinite(numeric) || numeric === -1) {
@@ -238,54 +227,128 @@ function folderLabel(id) {
   return state.folderById.get(numeric)?.title ?? t('folderFallback', [numeric]);
 }
 
-function folderNote(value) {
-  const numeric = Number(value);
-  return numeric === -1 || !Number.isFinite(numeric)
-    ? t('savedInRoot')
-    : t('savedInFolder', [folderLabel(numeric)]);
+function folderNoteFromSelection() {
+  const ids = [...state.selectedFolderIds].filter(Number.isFinite);
+  const nonRoot = ids.filter((id) => id !== -1);
+
+  if (!nonRoot.length) {
+    return t('savedInRoot');
+  }
+  if (nonRoot.length === 1) {
+    const base = t('savedInFolder', [folderLabel(nonRoot[0])]);
+    return `${base}${ids.includes(-1) ? t('savedInRootAnd') : ''}`;
+  }
+  return t('savedInFolders', [nonRoot.length]);
 }
 
-function applyBookmarkFolder(bookmark) {
-  const select = $('bookmark-folder');
-  if (!select) {
+function setSelectedFolders(ids) {
+  const numeric = (Array.isArray(ids) ? ids : []).map(Number).filter(Number.isFinite);
+  state.selectedFolderIds = new Set(numeric.length ? numeric : [-1]);
+  state.originalFolderIds = new Set(state.selectedFolderIds);
+  renderFolderPicker();
+  updateFolderSummary();
+  setFolderNote(folderNoteFromSelection());
+}
+
+function applyDefaultFolders() {
+  const last = Number(state.lastFolderId);
+  const exists = state.pickerFolders.some((folder) =>
+    Number(folder.id) === last && !folder.shared
+  );
+  state.selectedFolderIds = new Set([exists && last !== -1 ? last : -1]);
+  state.originalFolderIds = new Set(state.selectedFolderIds);
+  renderFolderPicker();
+  updateFolderSummary();
+  setFolderNote('');
+}
+
+function renderFolderPicker() {
+  const container = $('folder-options');
+  if (!container) {
     return;
   }
 
-  const ids = Array.isArray(bookmark.folders)
-    ? bookmark.folders.map(Number).filter(Number.isFinite)
-    : [];
-  const nonRoot = ids.filter((id) => id !== -1);
-  const inRoot = ids.includes(-1);
+  container.replaceChildren();
 
-  select.disabled = false;
-  state.loadedFolderValue = null;
+  const addRow = (id, title, depth, shared = false, unavailable = false) => {
+    const label = document.createElement('label');
+    label.className = 'folder-option';
+    label.style.paddingLeft = `${5 + depth * 12}px`;
 
-  if (nonRoot.length > 1) {
-    select.value = String(nonRoot[0]);
-    select.disabled = true;
-    setFolderNote(t('savedInFolders', [nonRoot.length]));
-    return;
-  }
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = String(id);
+    input.checked = state.selectedFolderIds.has(Number(id));
+    input.addEventListener('change', () => {
+      if (input.checked) {
+        state.selectedFolderIds.add(Number(id));
+      } else {
+        state.selectedFolderIds.delete(Number(id));
+      }
+      updateFolderSummary();
+      if (state.currentBookmark) {
+        setFolderNote(folderNoteFromSelection());
+      }
+    });
 
-  if (nonRoot.length === 1) {
-    const id = nonRoot[0];
-    const exists = Array.from(select.options).some((option) => option.value === String(id));
-    if (!exists) {
-      select.value = '-1';
-      select.disabled = true;
-      setFolderNote(t('savedInFolderUnavailable', [folderLabel(id)]));
-      return;
+    const text = document.createElement('span');
+    text.textContent = title;
+    label.append(input, text);
+
+    if (shared) {
+      const badge = document.createElement('span');
+      badge.className = 'folder-shared';
+      badge.textContent = t('sharedFolder');
+      label.append(badge);
+    }
+    if (unavailable) {
+      label.classList.add('is-unavailable');
     }
 
-    select.value = String(id);
-    state.loadedFolderValue = select.value;
-    setFolderNote(`${t('savedInFolder', [folderLabel(id)])}${inRoot ? t('savedInRootAnd') : ''}`);
+    container.append(label);
+  };
+
+  addRow(-1, t('rootNoFolder'), 0);
+  for (const folder of state.pickerFolders) {
+    addRow(folder.id, folder.title, folder.depth, folder.shared);
+  }
+  for (const id of state.selectedFolderIds) {
+    if (id === -1 || state.folderById.has(id)) {
+      continue;
+    }
+    addRow(id, t('folderUnavailableLabel', [id]), 0, false, true);
+  }
+}
+
+function updateFolderSummary() {
+  const summary = $('folder-summary');
+  if (!summary) {
     return;
   }
 
-  select.value = '-1';
-  state.loadedFolderValue = select.value;
-  setFolderNote(t('savedInRoot'));
+  const ids = [...state.selectedFolderIds];
+  const nonRoot = ids.filter((id) => id !== -1);
+
+  if (!nonRoot.length) {
+    summary.textContent = t('rootNoFolder');
+  } else if (nonRoot.length === 1) {
+    const label = folderLabel(nonRoot[0]);
+    summary.textContent = ids.includes(-1) ? t('withRoot', [label]) : label;
+  } else {
+    summary.textContent = t('folderCount', [nonRoot.length]);
+  }
+}
+
+function folderSelectionChanged() {
+  if (state.selectedFolderIds.size !== state.originalFolderIds.size) {
+    return true;
+  }
+  for (const id of state.selectedFolderIds) {
+    if (!state.originalFolderIds.has(id)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function setFolderNote(text) {
@@ -431,7 +494,7 @@ function populateAddForm(bookmark, fallbackUrl, fallbackTitle) {
   setVisible($('delete-bookmark'), true);
   setBookmarkStatus(t('alreadySaved'));
   setPageState(t('saved'));
-  applyBookmarkFolder(bookmark);
+  setSelectedFolders(bookmark.folders);
 }
 
 function resetAddForm(url, title) {
@@ -450,14 +513,7 @@ function resetAddForm(url, title) {
   setPageState('');
   hideTagSuggestions();
 
-  const select = $('bookmark-folder');
-  if (select) {
-    select.disabled = false;
-    const desired = String(state.lastFolderId);
-    const exists = Array.from(select.options).some((option) => option.value === desired);
-    select.value = exists ? desired : '-1';
-  }
-  state.loadedFolderValue = null;
+  applyDefaultFolders();
   setFolderNote('');
 
   if (changed) {
@@ -487,15 +543,14 @@ async function saveBookmark() {
   }
 
   const id = $('bookmark-id').value;
-  const folderValue = $('bookmark-folder').value;
+  const selectedIds = [...state.selectedFolderIds].filter(Number.isFinite);
+  const normalizedIds = selectedIds.length ? selectedIds : [-1];
   let folders;
 
   if (!id) {
-    folders = folderValue !== '-1' ? [Number(folderValue)] : [];
-  } else if (!$('bookmark-folder').disabled &&
-             state.loadedFolderValue !== null &&
-             folderValue !== state.loadedFolderValue) {
-    folders = folderValue === '-1' ? [-1] : [Number(folderValue)];
+    folders = normalizedIds.length === 1 && normalizedIds[0] === -1 ? [] : normalizedIds;
+  } else if (folderSelectionChanged()) {
+    folders = normalizedIds;
   }
 
   const payload = {
@@ -525,16 +580,17 @@ async function saveBookmark() {
     setBookmarkStatus(t('alreadySaved'));
     setPageState(t('saved'));
 
-    if (!$('bookmark-folder').disabled) {
-      state.loadedFolderValue = $('bookmark-folder').value;
-      setFolderNote(folderNote(state.loadedFolderValue));
+    if (Array.isArray(bookmark.folders) && bookmark.folders.length) {
+      state.selectedFolderIds = new Set(bookmark.folders.map(Number).filter(Number.isFinite));
+      state.originalFolderIds = new Set(state.selectedFolderIds);
+      renderFolderPicker();
+      updateFolderSummary();
     }
+    setFolderNote(folderNoteFromSelection());
 
-    if (!id) {
-      const savedFolder = Number($('bookmark-folder').value);
-      state.lastFolderId = Number.isFinite(savedFolder) ? savedFolder : -1;
-      api.storage.local.set({ lastFolder: state.lastFolderId }).catch(() => {});
-    }
+    const nonRoot = [...state.selectedFolderIds].filter((folderId) => folderId !== -1);
+    state.lastFolderId = nonRoot.length === 1 ? nonRoot[0] : (nonRoot.length === 0 ? -1 : state.lastFolderId);
+    api.storage.local.set({ lastFolder: state.lastFolderId }).catch(() => {});
 
     state.currentBookmark = bookmark;
     mergeIndexedBookmark(bookmark);
@@ -953,6 +1009,82 @@ function highlightTag(index) {
   items[state.tagIndex].scrollIntoView({ block: 'nearest' });
 }
 
+function toggleFolderCreate(show) {
+  const row = $('folder-create');
+  if (!row) {
+    return;
+  }
+  setVisible(row, show);
+  if (show) {
+    populateNewFolderParentSelect();
+    $('new-folder-title').focus();
+  } else {
+    $('new-folder-title').value = '';
+  }
+}
+
+function populateNewFolderParentSelect() {
+  const select = $('new-folder-parent');
+  if (!select) {
+    return;
+  }
+
+  const previous = select.value;
+  select.replaceChildren(new Option(t('rootNoFolder'), '-1'));
+  for (const folder of state.folders) {
+    const indent = '\u00a0\u00a0'.repeat(folder.depth);
+    select.append(new Option(`${indent}${folder.title}`, String(folder.id)));
+  }
+
+  const selectedNonRoot = [...state.selectedFolderIds].filter((id) => id !== -1);
+  const fallback = selectedNonRoot.length === 1 ? String(selectedNonRoot[0]) : '-1';
+  select.value = Array.from(select.options).some((option) => option.value === previous)
+    ? previous
+    : fallback;
+}
+
+async function createFolderFromPopup() {
+  if (!state.client) {
+    notify(t('setServerUrl'), 'error', t('openSettings'), openOptions);
+    return;
+  }
+
+  const title = $('new-folder-title').value.trim();
+  if (!title) {
+    notify(t('folderNameRequired'), 'error');
+    return;
+  }
+
+  const parentValue = Number($('new-folder-parent').value);
+  const parent = Number.isFinite(parentValue) ? parentValue : -1;
+
+  try {
+    const created = await createFolder(state.client, title, parent);
+    state.allFolders = [...state.allFolders, created];
+    state.pickerFolders = buildFolderTree(state.allFolders);
+    state.folders = buildFolderTree(state.allFolders.filter((folder) => !folder.shared));
+    state.folderById = new Map(state.pickerFolders.map((folder) => [folder.id, folder]));
+    state.selectedFolderIds.add(Number(created.id));
+    renderFolderPicker();
+    populateSearchFolderSelect();
+    updateFolderSummary();
+    if (state.currentBookmark) {
+      setFolderNote(folderNoteFromSelection());
+    }
+    if (state.account) {
+      try {
+        await writeCache(api, cacheKey('folders', state.account), state.allFolders);
+      } catch {
+        // The folder exists on the server; the cache will refresh later.
+      }
+    }
+    toggleFolderCreate(false);
+    notify(t('folderCreated'), 'success');
+  } catch (error) {
+    notify(formatError(error, t), 'error');
+  }
+}
+
 function notify(message, type = 'info', actionLabel, action) {
   const box = $('notification');
   if (!box) {
@@ -1005,6 +1137,15 @@ function bindEvents() {
 
   $('search-button').addEventListener('click', () => runSearch());
   $('load-more').addEventListener('click', () => runSearch({ append: true }));
+  $('new-folder').addEventListener('click', () => toggleFolderCreate($('folder-create').hidden));
+  $('cancel-folder').addEventListener('click', () => toggleFolderCreate(false));
+  $('create-folder').addEventListener('click', createFolderFromPopup);
+  $('new-folder-title').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      createFolderFromPopup();
+    }
+  });
   $('refresh-index').addEventListener('click', refreshIndexFromButton);
   for (const id of ['search-terms', 'search-tags']) {
     $(id).addEventListener('keydown', (event) => {

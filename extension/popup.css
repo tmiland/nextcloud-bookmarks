@@ -624,3 +624,92 @@ textarea {
 .status-note {
   color: var(--muted);
 }
+
+.folder-field {
+  position: relative;
+  min-width: 0;
+}
+
+.folder-picker {
+  position: relative;
+}
+
+.folder-picker summary {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  list-style: none;
+}
+
+.folder-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.folder-picker summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.folder-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.folder-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 5px;
+  border-radius: 4px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.folder-option:hover {
+  background: var(--accent-soft);
+}
+
+.folder-option .folder-shared {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.folder-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.folder-create input,
+.folder-create select {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 11px;
+}

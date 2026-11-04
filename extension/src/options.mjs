@@ -1,6 +1,8 @@
-import { fetchFolders } from './folders.mjs';
+import { cacheKey, writeCache } from './cache.mjs';
+import { createFolder, fetchFolders, renameFolder } from './folders.mjs';
 import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
 import {
+  accountKey,
   buildClient,
   hasHostPermission,
   loadSettings as loadStoredSettings,
@@ -21,7 +23,11 @@ const state = {
   settings: {},
   client: null,
   importPreview: null,
-  cancelled: false
+  cancelled: false,
+  account: '',
+  folders: [],
+  allFolders: [],
+  renamingFolderId: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -46,6 +52,7 @@ async function init() {
   state.settings = await loadStoredSettings();
   renderSettings();
   await refreshPermission();
+  await initFolders();
   await initImport();
 }
 
@@ -54,6 +61,13 @@ function bindEvents() {
   $('save-settings').addEventListener('click', saveSettings);
   $('grant-host').addEventListener('click', grantHostPermission);
   $('grant-bookmarks').addEventListener('click', grantBookmarksPermission);
+  $('create-folder-options').addEventListener('click', createFolderFromOptions);
+  $('new-folder-options-title').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      createFolderFromOptions();
+    }
+  });
   $('preview-import').addEventListener('click', previewImport);
   $('start-import').addEventListener('click', startImport);
   $('cancel-import').addEventListener('click', () => {
@@ -68,6 +82,7 @@ function bindEvents() {
 }
 
 function renderSettings() {
+  state.account = accountKey(state.settings.serverUrl, state.settings.username);
   $('server-url').value = state.settings.serverUrl;
   $('username').value = state.settings.username;
   $('password').value = state.settings.password;
@@ -149,6 +164,7 @@ async function saveSettings() {
   updateSidebar();
 
   await refreshPermission();
+  await initFolders();
   await initImport();
 
   if (granted) {
@@ -204,9 +220,175 @@ async function grantHostPermission() {
 
   const granted = await requestHostPermission(api, serverUrl);
   await refreshPermission();
+  await initFolders();
   await initImport();
 
   notify(granted ? t('serverAccessGranted') : t('serverAccessNotGranted'), granted ? 'success' : 'error');
+}
+
+async function initFolders() {
+  const card = $('folders-card');
+  if (!card) {
+    return;
+  }
+
+  if (!state.settings.serverUrl || !state.client) {
+    setVisible(card, false);
+    return;
+  }
+
+  const granted = await hasHostPermission(api, state.settings.serverUrl);
+  if (!granted) {
+    setVisible(card, false);
+    return;
+  }
+
+  setVisible(card, true);
+  await loadFoldersForOptions();
+}
+
+async function loadFoldersForOptions() {
+  try {
+    const list = await fetchFolders(state.client, state.settings.username);
+    state.allFolders = list;
+    state.folders = list.filter((folder) => !folder.shared);
+    renderFolderList();
+    populateOptionsParentSelect();
+    if (state.account) {
+      try {
+        await writeCache(api, cacheKey('folders', state.account), list);
+      } catch {
+        // The list is still usable; the popup will refresh its cache later.
+      }
+    }
+  } catch (error) {
+    notify(formatError(error, t), 'error');
+  }
+}
+
+function renderFolderList() {
+  const container = $('folder-list');
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+  const tree = buildFolderTree(state.folders);
+  if (!tree.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = t('noFolders');
+    container.append(empty);
+    return;
+  }
+
+  for (const folder of tree) {
+    const row = document.createElement('div');
+    row.className = 'folder-row';
+    row.style.paddingLeft = `${8 + folder.depth * 16}px`;
+
+    if (state.renamingFolderId === folder.id) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = folder.title;
+      input.id = `rename-folder-${folder.id}`;
+
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'button button-primary button-small';
+      save.textContent = t('save');
+      save.addEventListener('click', () => commitRename(folder, input.value));
+
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'button button-quiet button-small';
+      cancel.textContent = t('cancel');
+      cancel.addEventListener('click', () => {
+        state.renamingFolderId = null;
+        renderFolderList();
+      });
+
+      row.append(input, save, cancel);
+    } else {
+      const name = document.createElement('span');
+      name.textContent = folder.title;
+
+      const rename = document.createElement('button');
+      rename.type = 'button';
+      rename.className = 'button button-quiet button-small';
+      rename.textContent = t('renameFolder');
+      rename.addEventListener('click', () => {
+        state.renamingFolderId = folder.id;
+        renderFolderList();
+      });
+
+      row.append(name, rename);
+    }
+
+    container.append(row);
+  }
+}
+
+function populateOptionsParentSelect() {
+  const select = $('new-folder-options-parent');
+  if (!select) {
+    return;
+  }
+
+  const previous = select.value;
+  select.replaceChildren(new Option(t('rootNoFolder'), '-1'));
+  for (const folder of buildFolderTree(state.folders)) {
+    const indent = '\u00a0\u00a0'.repeat(folder.depth);
+    select.append(new Option(`${indent}${folder.title}`, String(folder.id)));
+  }
+  select.value = Array.from(select.options).some((option) => option.value === previous)
+    ? previous
+    : '-1';
+}
+
+async function commitRename(folder, title) {
+  const value = String(title ?? '').trim();
+  if (!value) {
+    notify(t('folderNameRequired'), 'error');
+    return;
+  }
+
+  try {
+    await renameFolder(state.client, folder.id, value, folder.parentFolder ?? -1);
+    state.renamingFolderId = null;
+    await loadFoldersForOptions();
+    await loadImportFolders();
+    notify(t('folderRenamed'), 'success');
+  } catch (error) {
+    notify(formatError(error, t), 'error');
+  }
+}
+
+async function createFolderFromOptions() {
+  if (!state.client) {
+    notify(t('saveSettingsFirst'), 'error');
+    return;
+  }
+
+  const input = $('new-folder-options-title');
+  const title = input.value.trim();
+  if (!title) {
+    notify(t('folderNameRequired'), 'error');
+    return;
+  }
+
+  const parentValue = Number($('new-folder-options-parent').value);
+  const parent = Number.isFinite(parentValue) ? parentValue : -1;
+
+  try {
+    await createFolder(state.client, title, parent);
+    input.value = '';
+    await loadFoldersForOptions();
+    await loadImportFolders();
+    notify(t('folderCreated'), 'success');
+  } catch (error) {
+    notify(formatError(error, t), 'error');
+  }
 }
 
 async function initImport() {

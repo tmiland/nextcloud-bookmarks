@@ -267,7 +267,7 @@
     "message": "Save settings"
   },
   "importSection": {
-    "message": "02 · Import"
+    "message": "03 · Import"
   },
   "importHeading": {
     "message": "Bring Firefox bookmarks over"
@@ -475,5 +475,62 @@
   },
   "indexRefreshFailed": {
     "message": "Could not refresh the search index."
+  },
+  "foldersNav": {
+    "message": "Folders"
+  },
+  "foldersSection": {
+    "message": "02 · Folders"
+  },
+  "foldersHeading": {
+    "message": "Your folders"
+  },
+  "foldersHint": {
+    "message": "Create and rename folders here. Deleting folders stays in Nextcloud."
+  },
+  "newFolder": {
+    "message": "New folder"
+  },
+  "createFolder": {
+    "message": "Create"
+  },
+  "folderNamePlaceholder": {
+    "message": "Folder name"
+  },
+  "folderNameRequired": {
+    "message": "Enter a folder name."
+  },
+  "folderCreated": {
+    "message": "Folder created."
+  },
+  "folderRenamed": {
+    "message": "Folder renamed."
+  },
+  "renameFolder": {
+    "message": "Rename"
+  },
+  "folderCount": {
+    "message": "$1 folders"
+  },
+  "withRoot": {
+    "message": "$1 + Root"
+  },
+  "folderUnavailableLabel": {
+    "message": "Folder $1 (unavailable)"
+  },
+  "selectFolders": {
+    "message": "Select folders"
+  },
+  "sharedFolder": {
+    "message": "shared"
+  },
+  "folderCreateFailed": {
+    "message": "Could not create the folder."
+  },
+  "folderRenameFailed": {
+    "message": "Could not rename the folder."
+  },
+  "noFolders": {
+    "message": "No folders yet."
   }
 }

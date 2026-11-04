@@ -82,6 +82,7 @@ async function loadPopup({
   index = null,
   indexSyncedAt = Date.now(),
   fetchOverride = null,
+  lastFolder = 10,
   currentTab = { url: 'https://example.com/', title: 'Example Domain' }
 } = {}) {
   const dom = new JSDOM(popupHtml, {
@@ -102,7 +103,7 @@ async function loadPopup({
   };
 
   const account = accountKey(settings.serverUrl, settings.username);
-  const initialStorage = { settings, lastFolder: 10 };
+  const initialStorage = { settings, lastFolder };
   if (cacheFolders) {
     initialStorage[cacheKey('folders', account)] = {
       v: 1,
@@ -221,9 +222,11 @@ test('renders cached folders and tags while the server refresh hangs', async () 
 
   try {
     const document = popup.dom.window.document;
-    const folder = document.getElementById('bookmark-folder');
-    await waitFor(() => folder.options.length > 1);
-    assert.deepEqual(optionValues(folder), ['-1', '12', '10', '11']);
+    const boxes = await waitFor(() => {
+      const list = [...document.querySelectorAll('#folder-options input[type="checkbox"]')];
+      return list.length > 1 ? list : null;
+    });
+    assert.deepEqual(boxes.map((box) => box.value), ['-1', '12', '10', '11']);
 
     const tags = document.getElementById('bookmark-tags');
     tags.value = 'cl';
@@ -251,10 +254,12 @@ test('keeps cached folders when the folder refresh fails', async () => {
 
   try {
     const document = popup.dom.window.document;
-    const folder = document.getElementById('bookmark-folder');
-    await waitFor(() => folder.options.length > 1);
-    assert.ok(optionValues(folder).includes('10'));
-    assert.match(folder.textContent, /Cached Work/);
+    const boxes = await waitFor(() => {
+      const list = [...document.querySelectorAll('#folder-options input[type="checkbox"]')];
+      return list.length > 1 ? list : null;
+    });
+    assert.ok(boxes.map((box) => box.value).includes('10'));
+    assert.match(document.getElementById('folder-options').textContent, /Cached Work/);
   } finally {
     popup.cleanup();
   }
@@ -346,6 +351,107 @@ test('falls back to cached results when the server search fails', async () => {
     assert.equal(document.body.dataset.searchSource, 'cached');
     assert.match(document.getElementById('search-results').textContent, /Cached example/);
     assert.match(document.getElementById('notification').textContent, /Cached results/);
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('preserves shared and unknown folder IDs when editing a bookmark', async () => {
+  const bookmark = {
+    id: 5,
+    url: 'https://multi.example/',
+    title: 'Multi folder',
+    description: '',
+    tags: ['multi'],
+    folders: [10, 99],
+    lastmodified: 1700000000,
+    clickcount: 0,
+    available: true
+  };
+  const calls = [];
+
+  const popup = await loadPopup({
+    index: [bookmark],
+    cacheFolders: [
+      { id: 10, title: 'Work', parent_folder: -1, userId: 'test' },
+      { id: 13, title: 'Shared', parent_folder: -1, userId: 'other' }
+    ],
+    fetchOverride(url, options) {
+      calls.push({ url, options });
+      if (url.includes('/bookmark/5') && options?.method === 'PUT') {
+        return new Response(JSON.stringify({
+          status: 'success',
+          item: { ...bookmark, title: 'Multi folder updated', folders: [99] }
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return undefined;
+    }
+  });
+
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.body.dataset.indexReady === '1');
+    document.getElementById('search-button').click();
+    await waitFor(() => document.querySelectorAll('#search-results .result').length === 1);
+    document.querySelector('#search-results .result-edit').click();
+    await waitFor(() => document.getElementById('bookmark-id').value === '5');
+
+    const work = document.querySelector('#folder-options input[value="10"]');
+    const unknown = document.querySelector('#folder-options input[value="99"]');
+    assert.equal(work.checked, true);
+    assert.equal(unknown.checked, true);
+
+    work.checked = false;
+    work.dispatchEvent(new popup.dom.window.Event('change', { bubbles: true }));
+    document.getElementById('save-bookmark').click();
+
+    await waitFor(() => calls.some((call) => call.url.includes('/bookmark/5') && call.options?.method === 'PUT'));
+    const put = calls.find((call) => call.url.includes('/bookmark/5') && call.options?.method === 'PUT');
+    const body = new URLSearchParams(put.options.body);
+    assert.deepEqual(body.getAll('folders[]'), ['99']);
+    assert.equal(body.getAll('folders[]').includes('10'), false);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  } finally {
+    popup.cleanup();
+  }
+});
+
+test('creates a folder from the popup and selects it', async () => {
+  const calls = [];
+  const popup = await loadPopup({
+    cacheFolders: [
+      { id: 10, title: 'Work', parent_folder: -1, userId: 'test' }
+    ],
+    lastFolder: -1,
+    currentTab: { url: 'https://unsaved.example/', title: 'Unsaved' },
+    fetchOverride(url, options) {
+      calls.push({ url, options });
+      return undefined;
+    }
+  });
+
+  try {
+    const document = popup.dom.window.document;
+    await waitFor(() => document.getElementById('bookmark-url').value === 'https://unsaved.example/');
+    await waitFor(() => document.querySelectorAll('#folder-options input[type="checkbox"]').length > 1);
+    document.getElementById('new-folder').click();
+    document.getElementById('new-folder-title').value = 'New Folder';
+    document.getElementById('new-folder-parent').value = '10';
+    document.getElementById('create-folder').click();
+
+    const created = await waitFor(() => {
+      const row = [...document.querySelectorAll('#folder-options .folder-option')]
+        .find((entry) => entry.textContent.includes('New Folder'));
+      return row?.querySelector('input') ?? null;
+    }, 6000);
+    assert.equal(created.checked, true);
+    assert.match(document.getElementById('folder-summary').textContent, /New Folder/);
+
+    const post = calls.find((call) => call.url.endsWith('/folder') && call.options?.method === 'POST');
+    const body = new URLSearchParams(post.options.body);
+    assert.equal(body.get('title'), 'New Folder');
+    assert.equal(body.get('parent_folder'), '10');
+    await new Promise((resolve) => setTimeout(resolve, 200));
   } finally {
     popup.cleanup();
   }

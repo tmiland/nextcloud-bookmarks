@@ -20,7 +20,8 @@
 
       <nav class="side-nav">
         <a href="#connection"><span>01</span> <span data-i18n="connectionNav">Connection</span></a>
-        <a href="#import-card"><span>02</span> <span data-i18n="importNav">Import</span></a>
+        <a href="#folders-card"><span>02</span> <span data-i18n="foldersNav">Folders</span></a>
+        <a href="#import-card"><span>03</span> <span data-i18n="importNav">Import</span></a>
       </nav>
 
       <div class="side-meta">
@@ -93,6 +94,28 @@
             <button type="button" class="button button-primary" id="save-settings" data-i18n="saveSettings">Save settings</button>
           </div>
         </form>
+      </section>
+
+      <section class="card" id="folders-card" hidden>
+        <div class="card-head">
+          <div>
+            <p class="eyebrow" data-i18n="foldersSection">02 · Folders</p>
+            <h3 data-i18n="foldersHeading">Your folders</h3>
+          </div>
+          <span class="card-mark">+</span>
+        </div>
+
+        <p class="hint" data-i18n="foldersHint">
+          Create and rename folders here. Deleting folders stays in Nextcloud.
+        </p>
+
+        <div class="folder-list" id="folder-list"></div>
+
+        <div class="folder-create-row">
+          <input type="text" id="new-folder-options-title" autocomplete="off" data-i18n-placeholder="folderNamePlaceholder" placeholder="Folder name">
+          <select id="new-folder-options-parent"></select>
+          <button type="button" class="button button-primary button-small" id="create-folder-options" data-i18n="createFolder">Create</button>
+        </div>
       </section>
 
       <section class="card" id="import-card" hidden>
