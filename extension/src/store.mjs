@@ -50,7 +50,7 @@ function bumpEpoch(store, account) {
 export class BookmarkStore {
   constructor({
     indexedDB = globalThis.indexedDB,
-    dbName = DEFAULT_DB,
+    dbName = globalThis.__ncTestDbName ?? DEFAULT_DB,
     version = DEFAULT_VERSION
   } = {}) {
     this.indexedDB = indexedDB;

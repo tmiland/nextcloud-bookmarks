@@ -86,6 +86,10 @@ async function loadPopup({
   lastFolder = 10,
   currentTab = { url: 'https://example.com/', title: 'Example Domain' }
 } = {}) {
+  moduleCounter += 1;
+  const dbName = `nextcloud-bookmarks-test-${moduleCounter}`;
+  const previousDbName = globalThis.__ncTestDbName;
+  globalThis.__ncTestDbName = dbName;
   const dom = new JSDOM(popupHtml, {
     url: 'moz-extension://test/popup.html',
     pretendToBeVisual: true
@@ -100,7 +104,8 @@ async function loadPopup({
     Node: globalThis.Node,
     Event: globalThis.Event,
     CustomEvent: globalThis.CustomEvent,
-    getComputedStyle: globalThis.getComputedStyle
+    getComputedStyle: globalThis.getComputedStyle,
+    ncTestDbName: globalThis.__ncTestDbName
   };
 
   const account = accountKey(settings.serverUrl, settings.username);
@@ -175,11 +180,10 @@ async function loadPopup({
   };
 
   if (index) {
-    const store = new BookmarkStore();
+    const store = new BookmarkStore({ dbName });
     await store.replaceAll(account, index, indexSyncedAt);
   }
 
-  moduleCounter += 1;
   await import(`../extension/src/popup.mjs?dom=${moduleCounter}`);
   await waitFor(() => dom.window.document.getElementById('bookmark-title'));
 
@@ -195,6 +199,11 @@ async function loadPopup({
     globalThis.Event = previous.Event;
     globalThis.CustomEvent = previous.CustomEvent;
     globalThis.getComputedStyle = previous.getComputedStyle;
+    if (previousDbName === undefined) {
+      delete globalThis.__ncTestDbName;
+    } else {
+      globalThis.__ncTestDbName = previousDbName;
+    }
   };
 
   return { dom, browser, cleanup, account };
