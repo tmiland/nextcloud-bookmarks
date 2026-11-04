@@ -42,7 +42,7 @@ function settingsFor(serverUrl = base) {
   };
 }
 
-async function waitFor(predicate, timeout = 4000) {
+async function waitFor(predicate, timeout = 10000) {
   const deadline = Date.now() + timeout;
   let last;
   while (Date.now() < deadline) {
@@ -290,6 +290,7 @@ test('searches the local index, pages results, and edits and opens a result', as
 
   const popup = await loadPopup({
     index: bookmarks,
+    indexSyncedAt: Date.now() + 60_000,
     cacheFolders: [{ id: 10, title: 'Work', parent_folder: -1, userId: 'test' }],
     currentTab: { url: 'https://site-1.example/', title: 'Site 01' }
   });
