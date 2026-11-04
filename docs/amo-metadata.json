@@ -1,0 +1,26 @@
+{
+  "name": {
+    "en-US": "Nextcloud Bookmarks"
+  },
+  "summary": {
+    "en-US": "Unofficial Firefox client for Nextcloud Bookmarks: quick-save, search, organize, and import."
+  },
+  "description": {
+    "en-US": "Unofficial Firefox client for the Nextcloud Bookmarks app. Use Alt+Shift+S or the page context menu for one-action quick save with Undo. Save with a title, note, tags, and one or more Nextcloud folders; the extension detects when a page is already saved and offers Update or Delete instead of creating a duplicate. Search by text or tags with AND/OR matching, sort results, scope by folder, filter untagged/broken/duplicate bookmarks, page through results, and edit or open any result. Folders, tags, and an account-scoped bookmark index are cached locally, so search is instant and read-only search keeps working offline. Create and rename folders, and import Firefox bookmarks while recreating the Firefox folder tree; imports run concurrently, skip duplicate URLs, and can be resumed. Use a revocable Nextcloud app password, including with two-factor authentication. Host access is requested only for the Nextcloud server you configure; Firefox bookmarks access is optional and requested only for the import. No telemetry or third-party services. This is an independent, unofficial project and is not affiliated with Nextcloud."
+  },
+  "categories": [
+    "bookmarks"
+  ],
+  "homepage": {
+    "en-US": "https://github.com/tmiland/nextcloud-bookmarks"
+  },
+  "support_url": {
+    "en-US": "https://github.com/tmiland/nextcloud-bookmarks/issues"
+  },
+  "contributions_url": "https://github.com/sponsors/tmiland",
+  "default_locale": "en-US",
+  "version": {
+    "license": "MIT"
+  },
+  "slug": "nextcloud-bookmarks"
+}

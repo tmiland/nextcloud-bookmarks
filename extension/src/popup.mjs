@@ -117,7 +117,7 @@ async function init() {
 
   const home = $('open-bookmarks');
   if (home) {
-    home.href = `${state.serverUrl}/apps/bookmarks/`;
+    home.href = `${state.serverUrl}/index.php/apps/bookmarks/`;
   }
 
   if (!(await hasHostPermission(api, state.serverUrl))) {
@@ -890,12 +890,15 @@ function renderResult(bookmark) {
     meta.append(date);
   }
 
+  const actions = document.createElement('div');
+  actions.className = 'result-actions';
+
   const edit = document.createElement('button');
   edit.type = 'button';
   edit.className = 'result-edit';
   edit.textContent = t('editButton');
   edit.addEventListener('click', () => editResult(bookmark));
-  meta.append(edit);
+  actions.append(edit);
 
   const open = document.createElement('a');
   open.className = 'result-open';
@@ -903,16 +906,16 @@ function renderResult(bookmark) {
   open.href = `${state.serverUrl}/index.php/apps/bookmarks/bookmarks/${encodeURIComponent(bookmark.id)}`;
   open.target = '_blank';
   open.rel = 'noopener noreferrer';
-  meta.append(open);
+  actions.append(open);
 
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'result-delete';
   remove.textContent = t('deleteButton');
   remove.addEventListener('click', () => requestDelete(bookmark.id));
-  meta.append(remove);
+  actions.append(remove);
 
-  card.append(meta);
+  card.append(meta, actions);
   return card;
 }
 

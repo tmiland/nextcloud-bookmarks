@@ -7,51 +7,59 @@
 [![Sponsor @tmiland](https://img.shields.io/badge/Sponsor-%40tmiland-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/tmiland)
 
 An unofficial Firefox client for the [Nextcloud Bookmarks](https://github.com/nextcloud/bookmarks)
-app: save the current page, search and organize your bookmarks, and import
+app: quick-save the current page, search and organize your bookmarks, and import
 Firefox bookmarks manually.
 
 > **Unofficial. Not affiliated with Nextcloud.** Nextcloud and Nextcloud
 > Bookmarks are separate open-source projects. This extension is an independent
 > client for the public Bookmarks REST API.
 
-**Status:** v0.1.4 · Firefox MV3 · AMO submission not yet made.
+**Status:** v0.2.0 · Firefox MV3 · AMO submission not yet made.
 
 ## Screenshots
 
 | Bookmark popup | Search results |
 | --- | --- |
-| <img src="docs/screenshots/popup.png" alt="Bookmark popup with title, folder, tags, and note" width="360"> | <img src="docs/screenshots/search.png" alt="Search results with tags and delete buttons" width="360"> |
+| <img src="docs/screenshots/popup.png" alt="Bookmark popup with folders, tags, and note" width="360"> | <img src="docs/screenshots/search.png" alt="Search results with tags, edit, open, and delete actions" width="360"> |
 
 <p align="center">
-  <img src="docs/screenshots/options.png" alt="Settings and manual Firefox bookmark import" width="720">
+  <img src="docs/screenshots/options.png" alt="Settings, folder management, and manual Firefox bookmark import" width="720">
   <br>
-  <sub>Settings and the manual Firefox → Nextcloud import.</sub>
+  <sub>Settings, folder management, and the manual Firefox → Nextcloud import.</sub>
 </p>
 
 ## Features
 
-- Save the current page with a title, note, tags, and an existing Nextcloud
-  folder.
+- **One-action quick save** from the keyboard (`Alt+Shift+S`) or the page
+  context menu, using your last-used folder. A toast offers **Undo**; restricted
+  pages fall back to a notification and toolbar badge.
+- Save the current page with a title, note, tags, and **one or more Nextcloud
+  folders** (including shared folders you can write to).
 - **Current-page detection**: if the page is already saved, load the stored
-  title, note, tags, and folder, and offer **Update** or **Delete** instead of
+  title, note, tags, and folders, and offer **Update** or **Delete** instead of
   creating a duplicate.
-- **Folder selector** populated from your existing own Nextcloud folders. The
-  last used folder is remembered; single-folder bookmarks can be moved from the
-  popup, while multi-folder bookmarks are shown read-only.
+- **Folder picker** from your Nextcloud folder tree, with last-used folder
+  memory and inline **new folder** creation. Settings can create and rename
+  folders; deleting folders stays in Nextcloud.
 - **Tag autocomplete** from the tags already present in Nextcloud.
-- Search by text, by one or more tags, with AND/OR matching, or with paging
-  disabled.
-- Delete bookmarks from the form or from search results with an inline
-  confirmation.
-- **Manual one-way import** of Firefox bookmarks into an existing Nextcloud
-  folder, with a preview, duplicate-URL skipping, progress, and cancel. Nothing
-  is changed or deleted in Firefox.
+- Search by text, by one or more tags, with AND/OR matching, sorting, folder
+  scoping, and filters for untagged, broken, and duplicated bookmarks.
+- **Edit any result** in the form, open it in the Nextcloud web app, or delete
+  it with an inline confirmation. Results support **Load more** paging.
+- **Local-first reads**: folders, tags, and an account-scoped bookmark index are
+  cached locally. Search is instant from the index and falls back to cached
+  results when the server is unreachable.
+- **Manual one-way import** of Firefox bookmarks with an option to recreate the
+  Firefox folder tree in Nextcloud. Import runs concurrently, skips duplicate
+  URLs, reports progress, and can be resumed or discarded after a cancel.
 - Nextcloud **app password** support, including two-factor authentication.
 - Optional per-server host access: the extension requests access only to the
   Nextcloud origin you configure.
-- Follows the active Firefox light/dark theme using Firefox’s design colors.
+- English and Norwegian Bokmål UI. Follows the active Firefox light/dark theme
+  using Firefox’s design colors.
 
-It does **not** run automatic or two-way synchronization.
+It does **not** run automatic or two-way synchronization, and writes require the
+server. Offline mode is read-only search from the local index.
 
 ## Install
 
@@ -86,13 +94,25 @@ AMO automatically; the manifest intentionally has **no `update_url`**.
 5. Open the toolbar icon. The current page’s URL and title are filled in
    automatically.
 
+### Keyboard shortcuts
+
+- `Alt+Shift+S` — save the current page to the last-used folder.
+- `Alt+Shift+B` — open the popup.
+
+You can change both shortcuts in Firefox’s **Manage Extension Shortcuts** page.
+
 ## Permissions and privacy
 
-- `storage` — stores the server URL, username, app password, and UI preference
-  locally in Firefox.
+- `storage` — stores the server URL, username, app password, UI preference,
+  folder/tag cache, last-used folder, and resumable import state locally in
+  Firefox.
 - `activeTab` — reads the current tab’s URL and title after you open the popup,
-  so the bookmark form can be prefilled and checked against your saved
-  bookmarks.
+  press the quick-save shortcut, or use the context menu.
+- `menus` — adds the **Save page to Nextcloud** context-menu items.
+- `scripting` — injects the small quick-save toast into the active page after a
+  user action. It does not read page content.
+- `notifications` — shows a fallback notification when the toast cannot be
+  injected, such as on a restricted page.
 - Optional host access — requested only for the Nextcloud origin you configure.
 - Optional `bookmarks` — requested only when you open the Firefox import
   section; it reads the Firefox bookmark tree for preview/import.
@@ -100,15 +120,16 @@ AMO automatically; the manifest intentionally has **no `update_url`**.
 The extension sends data only to the Nextcloud server you configure:
 
 - authentication information with every API request;
-- the current page URL/title and the bookmark title, note, tags, and folder you
+- the current page URL/title and the bookmark title, note, tags, and folders you
   enter;
-- search terms and tags;
-- the Firefox bookmarks you explicitly preview/import (URL and title), only
-  after you grant the optional `bookmarks` permission.
+- search terms, tags, sort/filter parameters, and folder IDs;
+- the Firefox bookmarks you explicitly preview/import (URL, title, and folder
+  names), only after you grant the optional `bookmarks` permission.
 
 There is no telemetry, analytics, remote logging, or third-party service. The app
 password is stored locally in Firefox’s extension storage; use a revocable app
-password. See [privacy_policy.md](privacy_policy.md).
+password. The local bookmark index lives in IndexedDB and is scoped to the
+server/username pair. See [privacy_policy.md](privacy_policy.md).
 
 ## How it works
 
@@ -121,6 +142,8 @@ POST   /index.php/apps/bookmarks/public/rest/v2/bookmark
 PUT    /index.php/apps/bookmarks/public/rest/v2/bookmark/{id}
 DELETE /index.php/apps/bookmarks/public/rest/v2/bookmark/{id}
 GET    /index.php/apps/bookmarks/public/rest/v2/folder
+POST   /index.php/apps/bookmarks/public/rest/v2/folder
+PUT    /index.php/apps/bookmarks/public/rest/v2/folder/{id}
 GET    /index.php/apps/bookmarks/public/rest/v2/tag
 ```
 
@@ -132,26 +155,39 @@ bookmarks.
 ## Development
 
 ```sh
-# Unit tests for URL, auth, request-building, and folder helpers
+# Unit and DOM tests
 npm test
 
-# Load the extension in Firefox
-web-ext run --source-dir extension
+# Real Firefox integration tests (mock Nextcloud + headless Marionette)
+npm run test:integration
 
-# Package for AMO
+# AMO lint and packaging
+npm run lint
 npm run build
 ```
 
-The build packages only the `extension/` directory via `web-ext-config.js`.
+The integration runner needs Python 3, `marionette-driver`, Firefox, `zip`, and
+`curl`. Install the Python dependency with:
+
+```sh
+python3 -m pip install -r test/integration/requirements.txt
+```
+
+The build packages only the `extension/` directory via `web-ext-config.cjs`.
 
 Main files:
 
-- `extension/src/popup.mjs` — popup UI, current-page lookup, save/update/delete,
-  search, folder/tag UI.
-- `extension/src/options.mjs` — settings, permissions, and the manual Firefox
-  import.
+- `extension/src/popup.mjs` — popup UI, quick save interactions, search,
+  folder picker, and local index/search.
+- `extension/src/options.mjs` — settings, folder management, and the manual
+  Firefox import.
+- `extension/src/background.mjs` — quick-save command, context menus, toast,
+  and undo.
 - `extension/src/api.mjs` — Nextcloud REST client.
-- `extension/src/utils.mjs` — URL, auth, folder-tree, tag, and error helpers.
+- `extension/src/store.mjs` / `sync.mjs` — IndexedDB bookmark index.
+- `extension/src/search.mjs` — local filtering, sorting, and paging.
+- `extension/src/import.mjs` — tree-aware import planning and resumable runner.
+- `extension/src/settings.mjs` / `cache.mjs` / `folders.mjs` — shared helpers.
 - `extension/manifest.json` — Firefox MV3 manifest.
 
 ## Limitations
@@ -159,16 +195,16 @@ Main files:
 - Firefox only.
 - No automatic or two-way synchronization. The Firefox import is manual and
   one-way (Firefox → Nextcloud).
-- The import flattens the selected Firefox folder tree into one existing
-  Nextcloud folder; it does not create Nextcloud folders. Firefox bookmarks have
-  no tags or notes, so those fields are empty after import.
-- The folder picker lists your own Nextcloud folders; shared folders owned by
-  other users are not offered. Existing bookmarks in multiple folders are shown
-  read-only; move them in Nextcloud.
+- Offline mode is read-only: searches use the cached index, but creates,
+  updates, and deletes need the server.
+- Shared folders are shown and can be preserved, but the server decides whether
+  you may write to them.
+- Import preserves the Firefox folder tree by default. Empty Firefox folders
+  are not created because the import is bookmark-driven.
+- Large imports run with five concurrent requests and can be resumed after a
+  cancel or a closed settings tab.
 - Remote Nextcloud servers must use HTTPS. A self-signed certificate must be
   trusted by Firefox.
-- Large imports run sequentially and can take a while; use the progress bar and
-  Cancel button in Settings.
 
 ## Troubleshooting
 
@@ -180,6 +216,11 @@ Main files:
   check that the server URL is the Nextcloud base URL.
 - **Tags are missing** — this client sends the top-level `tags[]` parameter
   required by Bookmarks 3.x.
+- **Quick save does nothing** — check the shortcut in Firefox’s extension
+  shortcuts page, and make sure the page is not restricted (`about:`,
+  `addons.mozilla.org`, PDF viewer, and similar pages cannot be scripted).
+- **Search shows cached results** — the server was unreachable, so the last
+  local index is shown. Reconnect and use **Refresh index**.
 - **Import says “0 new”** — every URL in the selected Firefox folder already
   exists in Nextcloud, or the folder is empty. Duplicates are skipped by URL.
 - **“Allow bookmarks access”** — the import needs the optional Firefox
@@ -188,8 +229,8 @@ Main files:
 ## Contributing
 
 Issues and pull requests are welcome. Please keep changes focused, run
-`npm test`, and describe the Firefox and Nextcloud Bookmarks versions you
-tested.
+`npm test` and `npm run test:integration`, and describe the Firefox and Nextcloud
+Bookmarks versions you tested.
 
 ## Support
 

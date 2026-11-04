@@ -1,6 +1,6 @@
 {
   "name": "Nextcloud Bookmarks",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "manifest_version": 3,
   "default_locale": "en",
   "description": "Unofficial Firefox client for the Nextcloud Bookmarks app: save, search, organize, and import bookmarks.",
