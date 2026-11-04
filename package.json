@@ -1,6 +1,6 @@
 {
   "name": "nextcloud-bookmarks",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Unofficial Firefox client for the Nextcloud Bookmarks app",
   "license": "MIT",
