@@ -385,5 +385,41 @@
   },
   "openSettings": {
     "message": "Åpne innstillinger"
+  },
+  "menuQuickSave": {
+    "message": "Lagre siden til Nextcloud"
+  },
+  "menuOpenPopup": {
+    "message": "Lagre med detaljer…"
+  },
+  "quickSaveSaved": {
+    "message": "Lagret i Nextcloud"
+  },
+  "quickSaveUndone": {
+    "message": "Bokmerket er fjernet"
+  },
+  "quickSaveUndoFailed": {
+    "message": "Kunne ikke angre"
+  },
+  "quickSaveAlreadySaved": {
+    "message": "Denne siden er allerede lagret."
+  },
+  "quickSaveUnsupported": {
+    "message": "Denne siden kan ikke bokmerkes."
+  },
+  "quickSaveUnconfigured": {
+    "message": "Sett opp Nextcloud i Innstillinger først."
+  },
+  "quickSaveNoAccess": {
+    "message": "Gi tilgang til Nextcloud-serveren i Innstillinger."
+  },
+  "quickSaveFailed": {
+    "message": "Kunne ikke lagre siden."
+  },
+  "undo": {
+    "message": "Angre"
+  },
+  "close": {
+    "message": "Lukk"
   }
 }

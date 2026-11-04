@@ -209,6 +209,68 @@ def main():
     wait_for(lambda: 'Example Domain' in text('search-results'))
     check('popup search works', 'Example Domain' in text('search-results'))
 
+    # Quick save: open a page in another tab, ask the background to save it,
+    # then exercise the injected toast and undo.
+    test_page_url = BASE + '/test-page'
+    add_tab(test_page_url)
+    switch_to('/popup.html')
+    result = client.execute_async_script("""
+        const done = arguments[arguments.length - 1];
+        window.wrappedJSObject.__ncTest.quickSaveTest(arguments[0])
+          .then((value) => done(JSON.stringify(value)))
+          .catch((error) => done('error:' + error.message));
+    """, script_args=[test_page_url])
+    check('quick save returns saved', '"status":"saved"' in result, result)
+    if '"status":"saved"' not in result:
+        client.set_context('chrome')
+        print('DEBUG console:', client.execute_script("""
+            return JSON.stringify(Services.console.getMessageArray().slice(-20).map((entry) => ({
+              message: entry.message || '',
+              error: entry.errorMessage || '',
+              source: entry.sourceName || '',
+              line: entry.lineNumber || 0
+            })));
+        """))
+        client.set_context('content')
+    quick = [b for b in server_state()['bookmarks'] if b['url'] == test_page_url]
+    check('quick save created the bookmark', len(quick) == 1, quick)
+
+    switch_to('/test-page')
+    wait_for(lambda: client.execute_script("return !!document.getElementById('nextcloud-bookmarks-toast')"))
+    check('quick save shows the toast', True)
+    client.execute_script("""
+        const host = document.getElementById('nextcloud-bookmarks-toast');
+        host.shadowRoot.querySelector('.undo').click();
+        return true;
+    """)
+    wait_for(lambda: not [b for b in server_state()['bookmarks'] if b['url'] == test_page_url])
+    check('toast undo deletes the bookmark', True)
+
+    switch_to('/popup.html')
+    result = client.execute_async_script("""
+        const done = arguments[arguments.length - 1];
+        window.wrappedJSObject.__ncTest.quickSaveTest(arguments[0])
+          .then((value) => done(JSON.stringify(value)))
+          .catch((error) => done('error:' + error.message));
+    """, script_args=[test_page_url])
+    check('quick save works again after undo', '"status":"saved"' in result, result)
+    switch_to('/test-page')
+    wait_for(lambda: client.execute_script("return !!document.getElementById('nextcloud-bookmarks-toast')"))
+    client.execute_script("""
+        const host = document.getElementById('nextcloud-bookmarks-toast');
+        host.shadowRoot.querySelector('.close').click();
+        return true;
+    """)
+
+    switch_to('/popup.html')
+    result = client.execute_async_script("""
+        const done = arguments[arguments.length - 1];
+        window.wrappedJSObject.__ncTest.quickSaveTest(arguments[0])
+          .then((value) => done(JSON.stringify(value)))
+          .catch((error) => done('error:' + error.message));
+    """, script_args=[test_page_url])
+    check('quick save does not duplicate', '"status":"exists"' in result, result)
+
     seed(settings, 'options.html')
     wait_for(lambda: value('server-url') == BASE)
     check('options loads the server URL', value('server-url') == BASE)

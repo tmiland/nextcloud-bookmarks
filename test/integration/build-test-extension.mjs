@@ -60,6 +60,18 @@ globalThis.__ncTest = {
   },
   applyMainTab() {
     applyMainTab();
+  },
+  async quickSaveTest(tabUrl) {
+    const tabs = await browser.tabs.query({});
+    const tab = tabs && tabs.find((entry) => entry.url === tabUrl);
+    if (!tab) return { status: 'no-tab' };
+    return browser.runtime.sendMessage({
+      type: 'test-quick-save',
+      tab: { id: tab.id, url: tab.url, title: tab.title }
+    });
+  },
+  sendMessage(message) {
+    return browser.runtime.sendMessage(message);
   }
 };
 `;

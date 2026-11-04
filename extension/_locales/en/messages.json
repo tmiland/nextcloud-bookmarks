@@ -385,5 +385,41 @@
   },
   "openSettings": {
     "message": "Open settings"
+  },
+  "menuQuickSave": {
+    "message": "Save page to Nextcloud"
+  },
+  "menuOpenPopup": {
+    "message": "Save with details…"
+  },
+  "quickSaveSaved": {
+    "message": "Saved to Nextcloud"
+  },
+  "quickSaveUndone": {
+    "message": "Bookmark removed"
+  },
+  "quickSaveUndoFailed": {
+    "message": "Could not undo"
+  },
+  "quickSaveAlreadySaved": {
+    "message": "This page is already saved."
+  },
+  "quickSaveUnsupported": {
+    "message": "This page cannot be bookmarked."
+  },
+  "quickSaveUnconfigured": {
+    "message": "Set up Nextcloud in Settings first."
+  },
+  "quickSaveNoAccess": {
+    "message": "Grant access to your Nextcloud server in Settings."
+  },
+  "quickSaveFailed": {
+    "message": "Could not save the page."
+  },
+  "undo": {
+    "message": "Undo"
+  },
+  "close": {
+    "message": "Close"
   }
 }
