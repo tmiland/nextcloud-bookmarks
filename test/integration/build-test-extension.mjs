@@ -61,6 +61,10 @@ globalThis.__ncTest = {
   applyMainTab() {
     applyMainTab();
   },
+  setForm(url, title) {
+    resetAddForm(url, title);
+    return true;
+  },
   async quickSaveTest(tabUrl) {
     const tabs = await browser.tabs.query({});
     const tab = tabs && tabs.find((entry) => entry.url === tabUrl);
@@ -72,6 +76,15 @@ globalThis.__ncTest = {
   },
   sendMessage(message) {
     return browser.runtime.sendMessage(message);
+  },
+  async clearIndex() {
+    if (state.store && state.account) {
+      await state.store.clear(state.account);
+    }
+    state.indexedBookmarks = [];
+    state.indexReady = false;
+    state.indexSyncedAt = 0;
+    document.body.dataset.indexReady = '0';
   }
 };
 `;
@@ -81,7 +94,17 @@ await fs.writeFile(popupPath, `${popupSource}${popupBridge}`);
 
 const optionsBridge = `
 
-globalThis.__ncTest = { state };
+globalThis.__ncTest = {
+  state,
+  setSelect(id, value) {
+    const element = document.getElementById(id);
+    if (!element) return false;
+    if (!Array.from(element.options).some((option) => option.value === value)) return false;
+    element.value = value;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+};
 `;
 const optionsPath = path.join(out, 'src', 'options.mjs');
 const optionsSource = await fs.readFile(optionsPath, 'utf8');
