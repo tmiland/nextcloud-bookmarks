@@ -50,6 +50,7 @@ Firefox bookmarks manually.
 - Nextcloud **app password** support, including two-factor authentication.
 - Optional per-server host access: the extension requests access only to the
   Nextcloud origin you configure.
+- Follows the active Firefox light/dark theme using Firefox’s design colors.
 
 It does **not** run automatic or two-way synchronization.
 
