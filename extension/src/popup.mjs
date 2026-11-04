@@ -502,13 +502,9 @@ function activateTab(name) {
 
   setVisible($('panel-add'), name === 'add');
   setVisible($('panel-search'), name === 'search');
-  setVisible($('panel-daily'), name === 'daily');
 
   if (name === 'search') {
     $('search-terms').focus();
-  }
-  if (name === 'daily') {
-    runDailySearch();
   }
 }
 
@@ -532,20 +528,6 @@ async function runSearch() {
   });
 }
 
-async function runDailySearch() {
-  if (!state.client) {
-    return;
-  }
-
-  await searchInto({
-    terms: [],
-    tags: ['daily'],
-    conjunction: 'and',
-    page: 0,
-    target: $('daily-results'),
-    emptyMessage: 'No bookmarks tagged "daily" yet. Add the tag "daily" to a bookmark.'
-  });
-}
 
 async function searchInto({ terms, tags, conjunction, page, target, emptyMessage }) {
   target.replaceChildren();

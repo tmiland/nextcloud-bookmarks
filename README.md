@@ -41,7 +41,6 @@ Firefox bookmarks manually.
 - **Tag autocomplete** from the tags already present in Nextcloud.
 - Search by text, by one or more tags, with AND/OR matching, or with paging
   disabled.
-- **Daily** tab for bookmarks tagged `daily` (lowercase; tag filters are exact).
 - Delete bookmarks from the form or from search results with an inline
   confirmation.
 - **Manual one-way import** of Firefox bookmarks into an existing Nextcloud
@@ -181,8 +180,6 @@ Main files:
   check that the server URL is the Nextcloud base URL.
 - **Tags are missing** — this client sends the top-level `tags[]` parameter
   required by Bookmarks 3.x.
-- **Daily is empty after saving** — Daily is tag-based. Add the exact tag
-  `daily` to the bookmark (lowercase; `Daily` is a different tag).
 - **Import says “0 new”** — every URL in the selected Firefox folder already
   exists in Nextcloud, or the folder is empty. Duplicates are skipped by URL.
 - **“Allow bookmarks access”** — the import needs the optional Firefox

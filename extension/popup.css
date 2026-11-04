@@ -7,10 +7,11 @@
   --muted: light-dark(#5b5b66, #cfcfd8);
   --line: light-dark(#e0e0e6, #3a3a44);
   --line-strong: light-dark(#cfcfd8, #52525e);
-  --accent: light-dark(#0060df, #00ddff);
-  --accent-strong: light-dark(#0250bb, #80ebff);
-  --accent-soft: light-dark(#eaf2ff, #123d47);
-  --accent-contrast: light-dark(#ffffff, #15141a);
+  --accent: #0060df;
+  --accent-strong: #0250bb;
+  --accent-soft: light-dark(#eaf2ff, #102a4d);
+  --accent-text: light-dark(#0060df, #6aa6ff);
+  --accent-contrast: #ffffff;
   --danger: light-dark(#d70022, #ff9aa2);
   --danger-soft: light-dark(#ffe8ec, #3d1b24);
   --success: light-dark(#007a4d, #54d6a0);
@@ -161,7 +162,7 @@ textarea {
 
 .eyebrow {
   margin: 0 0 3px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9px;
   font-weight: 700;
@@ -208,12 +209,6 @@ textarea {
 .panels {
   flex: 1;
   padding: 14px 18px 12px;
-}
-
-.panel-hint {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 .field {
@@ -454,7 +449,7 @@ textarea {
 }
 
 .result-title:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -490,7 +485,7 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--accent-text);
   cursor: pointer;
   font-size: 9px;
 }
@@ -585,7 +580,7 @@ textarea {
 }
 
 .status-link:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
