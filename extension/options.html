@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nextcloud Bookmarks settings</title>
+  <title data-i18n="optionsTitle">Nextcloud Bookmarks settings</title>
   <link rel="stylesheet" href="options.css?v=0.1.4">
 </head>
 <body>
@@ -12,87 +12,85 @@
       <div class="side-brand">
         <img src="icons/icon-48.png" alt="" width="42" height="42">
         <div>
-          <p class="eyebrow">Self-hosted bookmarks</p>
-          <h1>Nextcloud Bookmarks</h1>
-          <p class="side-subtitle">Unofficial Firefox client</p>
+          <p class="eyebrow" data-i18n="selfHostedBookmarks">Self-hosted bookmarks</p>
+          <h1 data-i18n="appName">Nextcloud Bookmarks</h1>
+          <p class="side-subtitle" data-i18n="unofficialFirefoxClient">Unofficial Firefox client</p>
         </div>
       </div>
 
       <nav class="side-nav">
-        <a href="#connection"><span>01</span> Connection</a>
-        <a href="#import-card"><span>02</span> Import</a>
+        <a href="#connection"><span>01</span> <span data-i18n="connectionNav">Connection</span></a>
+        <a href="#import-card"><span>02</span> <span data-i18n="importNav">Import</span></a>
       </nav>
 
       <div class="side-meta">
-        <p class="eyebrow">Server</p>
-        <p class="side-server" id="side-server">Not configured</p>
-        <span class="stamp">Unofficial</span>
+        <p class="eyebrow" data-i18n="serverMeta">Server</p>
+        <p class="side-server" id="side-server" data-i18n="notConfigured">Not configured</p>
+        <span class="stamp" data-i18n="unofficial">Unofficial</span>
         <p class="side-version" id="extension-version"></p>
       </div>
 
       <div class="side-footer">
-        <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer">Source</a>
+        <a href="https://github.com/tmiland/nextcloud-bookmarks" target="_blank" rel="noopener noreferrer" data-i18n="source">Source</a>
         <span>·</span>
-        <a href="https://github.com/sponsors/tmiland" target="_blank" rel="noopener noreferrer">Sponsor</a>
+        <a href="https://github.com/sponsors/tmiland" target="_blank" rel="noopener noreferrer" data-i18n="sponsor">Sponsor</a>
       </div>
     </aside>
 
     <main class="content">
       <header class="hero">
-        <p class="eyebrow">Setup</p>
-        <h2>Connect your bookmark shelf.</h2>
+        <p class="eyebrow" data-i18n="setup">Setup</p>
+        <h2 data-i18n="connectShelf">Connect your bookmark shelf.</h2>
         <p class="lede">
-          Point the extension at your Nextcloud, use a revocable app password,
-          and keep your bookmarks in the folders you already use.
+          <span data-i18n="lede">Point the extension at your Nextcloud, use a revocable app password, and keep your bookmarks in the folders you already use.</span>
         </p>
       </header>
 
       <section class="card" id="connection">
         <div class="card-head">
           <div>
-            <p class="eyebrow">01 · Connection</p>
-            <h3>Nextcloud account</h3>
+            <p class="eyebrow" data-i18n="connectionSection">01 · Connection</p>
+            <h3 data-i18n="nextcloudAccount">Nextcloud account</h3>
           </div>
           <span class="card-mark">→</span>
         </div>
 
         <form id="settings-form" novalidate>
           <label class="field">
-            <span>Server URL</span>
-            <input type="text" id="server-url" autocomplete="url" placeholder="https://cloud.example.com">
+            <span data-i18n="serverUrlLabel">Server URL</span>
+            <input type="text" id="server-url" autocomplete="url" data-i18n-placeholder="serverUrlPlaceholder" placeholder="https://cloud.example.com">
           </label>
 
           <div class="field-row">
             <label class="field">
-              <span>Username</span>
+              <span data-i18n="usernameLabel">Username</span>
               <input type="text" id="username" autocomplete="username">
             </label>
             <label class="field">
-              <span>App password</span>
+              <span data-i18n="appPasswordLabel">App password</span>
               <input type="password" id="password" autocomplete="current-password">
             </label>
           </div>
 
           <p class="hint">
-            Use a revocable Nextcloud app password (Settings → Security → App passwords),
-            especially with two-factor authentication. It is stored locally in Firefox.
+            <span data-i18n="appPasswordHint">Use a revocable Nextcloud app password (Settings → Security → App passwords), especially with two-factor authentication. It is stored locally in Firefox.</span>
           </p>
 
           <label class="field">
-            <span>Start with</span>
+            <span data-i18n="startWith">Start with</span>
             <select id="main-tab">
-              <option value="add">Bookmark form</option>
-              <option value="search">Search</option>
+              <option value="add" data-i18n="startWithAdd">Bookmark form</option>
+              <option value="search" data-i18n="startWithSearch">Search</option>
             </select>
           </label>
 
           <div class="permission-box" id="permission-box" hidden>
             <p id="permission-text"></p>
-            <button type="button" class="button" id="grant-host" hidden>Grant server access</button>
+            <button type="button" class="button" id="grant-host" data-i18n="grantServerAccess" hidden>Grant server access</button>
           </div>
 
           <div class="actions">
-            <button type="button" class="button button-primary" id="save-settings">Save settings</button>
+            <button type="button" class="button button-primary" id="save-settings" data-i18n="saveSettings">Save settings</button>
           </div>
         </form>
       </section>
@@ -100,46 +98,45 @@
       <section class="card" id="import-card" hidden>
         <div class="card-head">
           <div>
-            <p class="eyebrow">02 · Import</p>
-            <h3>Bring Firefox bookmarks over</h3>
+            <p class="eyebrow" data-i18n="importSection">02 · Import</p>
+            <h3 data-i18n="importHeading">Bring Firefox bookmarks over</h3>
           </div>
           <span class="card-mark">⇢</span>
         </div>
 
         <p class="hint">
-          Manual one-way import into Nextcloud. Nothing is changed or deleted in Firefox.
+          <span data-i18n="importHint">Manual one-way import into Nextcloud. Nothing is changed or deleted in Firefox.</span>
         </p>
 
         <div id="import-permission">
-          <p class="hint" id="import-permission-text">
+          <p class="hint" id="import-permission-text" data-i18n="importPermission">
             Allow Firefox bookmarks access to choose what to import.
           </p>
-          <button type="button" class="button" id="grant-bookmarks">Allow bookmarks access</button>
+          <button type="button" class="button" id="grant-bookmarks" data-i18n="allowBookmarks">Allow bookmarks access</button>
         </div>
 
         <div id="import-controls" hidden>
           <div class="field-row">
             <label class="field">
-              <span>Firefox folder</span>
+              <span data-i18n="firefoxFolder">Firefox folder</span>
               <select id="firefox-folder"></select>
             </label>
             <label class="field">
-              <span>Nextcloud folder</span>
+              <span data-i18n="nextcloudFolder">Nextcloud folder</span>
               <select id="import-folder">
-                <option value="-1">Root (no folder)</option>
+                <option value="-1" data-i18n="rootNoFolder">Root (no folder)</option>
               </select>
             </label>
           </div>
 
           <p class="hint">
-            Existing URLs are skipped. Firefox folders are flattened into the selected
-            Nextcloud folder. This does not create Nextcloud folders.
+            <span data-i18n="importExistingHint">Existing URLs are skipped. Firefox folders are flattened into the selected Nextcloud folder. This does not create Nextcloud folders.</span>
           </p>
 
           <div class="actions">
-            <button type="button" class="button" id="preview-import">Preview</button>
-            <button type="button" class="button button-primary" id="start-import" disabled>Import</button>
-            <button type="button" class="button button-quiet" id="cancel-import" hidden>Cancel</button>
+            <button type="button" class="button" id="preview-import" data-i18n="preview">Preview</button>
+            <button type="button" class="button button-primary" id="start-import" data-i18n="importButton" disabled>Import</button>
+            <button type="button" class="button button-quiet" id="cancel-import" data-i18n="cancel" hidden>Cancel</button>
           </div>
 
           <progress id="import-progress" max="1" value="0" hidden></progress>
@@ -150,8 +147,8 @@
       <div class="notification" id="settings-notification" hidden aria-live="polite"></div>
 
       <footer class="content-footer">
-        <span>Unofficial. Not affiliated with Nextcloud.</span>
-        <span>MIT licensed.</span>
+        <span data-i18n="notAffiliated">Unofficial. Not affiliated with Nextcloud.</span>
+        <span data-i18n="mitLicensed">MIT licensed.</span>
       </footer>
     </main>
   </div>

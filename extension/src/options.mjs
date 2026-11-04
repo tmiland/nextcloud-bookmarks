@@ -1,4 +1,5 @@
 import { NextcloudClient } from './api.mjs';
+import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
 import {
   buildFolderTree,
   formatError,
@@ -32,6 +33,8 @@ function setText(element, text) {
 }
 
 async function init() {
+  setDocumentLanguage();
+  localizeDocument();
   bindEvents();
   updateVersion();
   await loadSettings();
@@ -48,12 +51,12 @@ function bindEvents() {
   $('start-import').addEventListener('click', startImport);
   $('cancel-import').addEventListener('click', () => {
     state.cancelled = true;
-    setImportStatus('Cancelling…');
+    setImportStatus(t('cancelling'));
   });
   $('firefox-folder').addEventListener('change', () => {
     state.importPreview = null;
     $('start-import').disabled = true;
-    setImportStatus('Choose a Firefox folder, preview, then import.');
+    setImportStatus(t('chooseFirefoxFolder'));
   });
 }
 
@@ -92,14 +95,14 @@ function updateSidebar() {
   }
 
   if (!state.settings.serverUrl) {
-    target.textContent = 'Not configured';
+    target.textContent = t('notConfigured');
     return;
   }
 
   try {
     target.textContent = new URL(normalizeServerUrl(state.settings.serverUrl)).host;
   } catch {
-    target.textContent = 'Invalid URL';
+    target.textContent = t('invalidServerUrl');
   }
 }
 
@@ -129,7 +132,7 @@ async function saveSettings() {
   }
 
   if (!serverUrl) {
-    notify('Enter your Nextcloud server URL.', 'error');
+    notify(t('enterServerUrl'), 'error');
     return;
   }
 
@@ -137,7 +140,7 @@ async function saveSettings() {
   try {
     pattern = originPattern(serverUrl);
   } catch {
-    notify('The server URL is not valid.', 'error');
+    notify(t('invalidServerUrl'), 'error');
     return;
   }
 
@@ -154,7 +157,7 @@ async function saveSettings() {
   try {
     await api.storage.local.set({ settings });
   } catch {
-    notify('Could not save the settings.', 'error');
+    notify(t('couldNotSaveSettings'), 'error');
     return;
   }
 
@@ -170,9 +173,9 @@ async function saveSettings() {
   await initImport();
 
   if (granted) {
-    notify('Settings saved.', 'success');
+    notify(t('settingsSaved'), 'success');
   } else {
-    notify('Settings saved, but server access was not granted.', 'error');
+    notify(t('settingsSavedNoAccess'), 'error');
   }
 }
 
@@ -207,17 +210,17 @@ async function refreshPermission() {
 
   setVisible(box, true);
   if (granted) {
-    setText(text, `Access to ${new URL(serverUrl).host} is granted.`);
+    setText(text, t('accessGranted', [new URL(serverUrl).host]));
     setVisible(button, false);
   } else {
-    setText(text, `This extension needs access to ${new URL(serverUrl).host} to read and save bookmarks.`);
+    setText(text, t('accessNeeded', [new URL(serverUrl).host]));
     setVisible(button, true);
   }
 }
 
 async function grantHostPermission() {
   if (!state.settings.serverUrl) {
-    notify('Save the server URL first.', 'error');
+    notify(t('saveServerFirst'), 'error');
     return;
   }
 
@@ -225,7 +228,7 @@ async function grantHostPermission() {
   try {
     pattern = originPattern(normalizeServerUrl(state.settings.serverUrl));
   } catch {
-    notify('The server URL is not valid.', 'error');
+    notify(t('invalidServerUrl'), 'error');
     return;
   }
 
@@ -233,7 +236,7 @@ async function grantHostPermission() {
   await refreshPermission();
   await initImport();
 
-  notify(granted ? 'Server access granted.' : 'Server access was not granted.', granted ? 'success' : 'error');
+  notify(granted ? t('serverAccessGranted') : t('serverAccessNotGranted'), granted ? 'success' : 'error');
 }
 
 async function initImport() {
@@ -257,7 +260,7 @@ async function initImport() {
   if (!hostGranted) {
     setVisible($('import-permission'), false);
     setVisible($('import-controls'), false);
-    setImportStatus('Save the settings and grant access to your Nextcloud server first.', 'error');
+    setImportStatus(t('saveSettingsAndGrant'), 'error');
     return;
   }
 
@@ -278,7 +281,7 @@ async function initImport() {
   setVisible($('import-permission'), false);
   setVisible($('import-controls'), true);
   await loadImportFolders();
-  setImportStatus('Choose a Firefox folder, preview, then import.');
+  setImportStatus(t('chooseFirefoxFolder'));
 }
 
 async function grantBookmarksPermission() {
@@ -287,7 +290,7 @@ async function grantBookmarksPermission() {
     .catch(() => false);
 
   if (!granted) {
-    setImportStatus('Firefox bookmarks access was not granted.', 'error');
+    setImportStatus(t('bookmarksAccessNotGranted'), 'error');
     return;
   }
 
@@ -296,7 +299,7 @@ async function grantBookmarksPermission() {
 
 async function loadImportFolders() {
   const importFolder = $('import-folder');
-  importFolder.replaceChildren(new Option('Root (no folder)', '-1'));
+  importFolder.replaceChildren(new Option(t('rootNoFolder'), '-1'));
 
   let hadError = false;
 
@@ -317,7 +320,7 @@ async function loadImportFolders() {
     }
   } catch (error) {
     hadError = true;
-    setImportStatus(`Could not load Nextcloud folders: ${formatError(error)}`, 'error');
+    setImportStatus(t('couldNotLoadFolders', [formatError(error, t)]), 'error');
   }
 
   try {
@@ -325,17 +328,17 @@ async function loadImportFolders() {
     populateFirefoxFolders(tree);
   } catch (error) {
     hadError = true;
-    setImportStatus(`Could not read Firefox bookmarks: ${error.message}`, 'error');
+    setImportStatus(t('couldNotReadBookmarks', [error.message]), 'error');
   }
 
   if (!hadError) {
-    setImportStatus('Choose a Firefox folder, preview, then import.');
+    setImportStatus(t('chooseFirefoxFolder'));
   }
 }
 
 function populateFirefoxFolders(tree) {
   const select = $('firefox-folder');
-  select.replaceChildren(new Option('All bookmarks', 'all'));
+  select.replaceChildren(new Option(t('allBookmarks'), 'all'));
 
   function walk(nodes, depth) {
     for (const node of nodes) {
@@ -345,7 +348,7 @@ function populateFirefoxFolders(tree) {
 
       if (node.id !== 'root________') {
         const indent = '\u00a0\u00a0'.repeat(depth);
-        select.append(new Option(`${indent}${node.title || '(untitled folder)'}`, node.id));
+        select.append(new Option(`${indent}${node.title || t('untitledFolder')}`, node.id));
       }
 
       if (node.children) {
@@ -390,7 +393,7 @@ async function collectFirefoxBookmarks(folderId) {
 
 async function previewImport() {
   if (!state.client) {
-    setImportStatus('Save the settings first.', 'error');
+    setImportStatus(t('saveSettingsFirst'), 'error');
     return;
   }
 
@@ -414,13 +417,13 @@ async function previewImport() {
 
     const total = newItems.length + duplicates + collected.skipped;
     setImportStatus(
-      `Found ${total} bookmarks: ${newItems.length} new, ${duplicates} already in Nextcloud, ${collected.skipped} unsupported.`,
+      t('previewFound', [total, newItems.length, duplicates, collected.skipped]),
       newItems.length ? '' : 'error'
     );
   } catch (error) {
     state.importPreview = null;
     $('start-import').disabled = true;
-    setImportStatus(`Preview failed: ${formatError(error)}`, 'error');
+    setImportStatus(t('previewFailed', [formatError(error, t)]), 'error');
   }
 }
 
@@ -476,13 +479,13 @@ async function startImport() {
       } else {
         failed++;
         if (errors.length < 3) {
-          errors.push(formatError(error));
+          errors.push(formatError(error, t));
         }
       }
     }
 
     progress.value = index + 1;
-    setImportStatus(`Importing ${index + 1} of ${items.length}…`);
+    setImportStatus(t('importingProgress', [index + 1, items.length]));
     await new Promise((resolve) => window.setTimeout(resolve, 75));
   }
 
@@ -493,7 +496,7 @@ async function startImport() {
   importSelect.disabled = false;
   state.importPreview = null;
 
-  let summary = `${state.cancelled ? 'Import cancelled. ' : ''}Imported ${created}, skipped ${skipped}, failed ${failed}.`;
+  let summary = `${state.cancelled ? t('importCancelled') : ''}${t('importSummary', [created, skipped, failed])}`;
   if (errors.length) {
     summary += ` ${errors.join(' ')}`;
   }
@@ -529,5 +532,5 @@ function notify(message, type = 'info') {
 }
 
 init().catch((error) => {
-  notify(formatError(error), 'error');
+  notify(formatError(error, t), 'error');
 });

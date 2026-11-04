@@ -1,4 +1,5 @@
 import { NextcloudClient } from './api.mjs';
+import { localizeDocument, setDocumentLanguage, t } from './i18n.mjs';
 import {
   buildFolderTree,
   formatDate,
@@ -48,8 +49,8 @@ function setPageContext(url) {
   }
 
   if (!url) {
-    context.textContent = 'New bookmark';
-    pageUrl.textContent = 'Open a page to save it.';
+    context.textContent = t('newBookmark');
+    pageUrl.textContent = t('openPageToSave');
     return;
   }
 
@@ -58,7 +59,7 @@ function setPageContext(url) {
     context.textContent = parsed.hostname.replace(/^www\./, '');
     pageUrl.textContent = parsed.pathname === '/' ? parsed.origin : parsed.href;
   } catch {
-    context.textContent = 'Current page';
+    context.textContent = t('currentPageFallback');
     pageUrl.textContent = url;
   }
 }
@@ -72,13 +73,15 @@ function setPageState(text) {
 }
 
 async function init() {
+  setDocumentLanguage();
+  localizeDocument();
   bindEvents();
 
   state.settings = await loadSettings();
   state.serverUrl = '';
 
   if (!state.settings.serverUrl) {
-    notify('Set your Nextcloud server URL in Settings.', 'error', 'Open settings', openOptions);
+    notify(t('setServerUrl'), 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
   }
@@ -86,7 +89,7 @@ async function init() {
   try {
     state.serverUrl = normalizeServerUrl(state.settings.serverUrl);
   } catch (error) {
-    notify(error.message, 'error', 'Open settings', openOptions);
+    notify(error.message, 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
   }
@@ -103,7 +106,7 @@ async function init() {
   }
 
   if (!(await hasHostPermission())) {
-    notify('Access to your Nextcloud server is required.', 'error', 'Open settings', openOptions);
+    notify(t('accessRequired'), 'error', t('openSettings'), openOptions);
     await loadCurrentTab();
     return;
   }
@@ -190,7 +193,7 @@ function populateFolderSelect() {
   }
 
   select.replaceChildren();
-  select.append(new Option('Root (no folder)', '-1'));
+  select.append(new Option(t('rootNoFolder'), '-1'));
 
   for (const folder of state.folders) {
     const indent = '\u00a0\u00a0'.repeat(folder.depth);
@@ -207,16 +210,16 @@ function populateFolderSelect() {
 function folderLabel(id) {
   const numeric = Number(id);
   if (!Number.isFinite(numeric) || numeric === -1) {
-    return 'Root';
+    return t('root');
   }
-  return state.folderById.get(numeric)?.title ?? `Folder ${numeric}`;
+  return state.folderById.get(numeric)?.title ?? t('folderFallback', [numeric]);
 }
 
 function folderNote(value) {
   const numeric = Number(value);
   return numeric === -1 || !Number.isFinite(numeric)
-    ? 'Saved in: Root'
-    : `Saved in: ${folderLabel(numeric)}`;
+    ? t('savedInRoot')
+    : t('savedInFolder', [folderLabel(numeric)]);
 }
 
 function applyBookmarkFolder(bookmark) {
@@ -237,7 +240,7 @@ function applyBookmarkFolder(bookmark) {
   if (nonRoot.length > 1) {
     select.value = String(nonRoot[0]);
     select.disabled = true;
-    setFolderNote(`Saved in ${nonRoot.length} folders; move it in Nextcloud.`);
+    setFolderNote(t('savedInFolders', [nonRoot.length]));
     return;
   }
 
@@ -247,19 +250,19 @@ function applyBookmarkFolder(bookmark) {
     if (!exists) {
       select.value = '-1';
       select.disabled = true;
-      setFolderNote(`Saved in: ${folderLabel(id)} (folder list unavailable)`);
+      setFolderNote(t('savedInFolderUnavailable', [folderLabel(id)]));
       return;
     }
 
     select.value = String(id);
     state.loadedFolderValue = select.value;
-    setFolderNote(`Saved in: ${folderLabel(id)}${inRoot ? ' and Root' : ''}`);
+    setFolderNote(`${t('savedInFolder', [folderLabel(id)])}${inRoot ? t('savedInRootAnd') : ''}`);
     return;
   }
 
   select.value = '-1';
   state.loadedFolderValue = select.value;
-  setFolderNote('Saved in: Root');
+  setFolderNote(t('savedInRoot'));
 }
 
 function setFolderNote(text) {
@@ -333,11 +336,11 @@ function populateAddForm(bookmark, fallbackUrl, fallbackTitle) {
   $('bookmark-id').value = bookmark.id ?? '';
 
   const save = $('save-bookmark');
-  save.textContent = 'Update';
+  save.textContent = t('updateButton');
   save.disabled = false;
   setVisible($('delete-bookmark'), true);
-  setBookmarkStatus('This page is already saved.');
-  setPageState('Saved');
+  setBookmarkStatus(t('alreadySaved'));
+  setPageState(t('saved'));
   applyBookmarkFolder(bookmark);
 }
 
@@ -348,7 +351,7 @@ function resetAddForm(url, title) {
   $('bookmark-url').value = url ?? '';
   $('bookmark-title').value = title ?? '';
   $('bookmark-id').value = '';
-  $('save-bookmark').textContent = 'Save';
+  $('save-bookmark').textContent = t('saveButton');
   $('save-bookmark').disabled = false;
   setVisible($('delete-bookmark'), false);
   setBookmarkStatus('');
@@ -381,13 +384,13 @@ function setBookmarkStatus(text) {
 
 async function saveBookmark() {
   if (!state.client) {
-    notify('Set the server URL in Settings.', 'error', 'Open settings', openOptions);
+    notify(t('setServerUrl'), 'error', t('openSettings'), openOptions);
     return;
   }
 
   const rawUrl = $('bookmark-url').value.trim().replace(/\/+$/, '');
   if (!rawUrl) {
-    notify('The URL is empty.', 'error');
+    notify(t('urlEmpty'), 'error');
     return;
   }
 
@@ -421,14 +424,14 @@ async function saveBookmark() {
     const bookmark = result?.item;
 
     if (!bookmark?.id) {
-      throw new Error(id ? 'The bookmark was not updated.' : 'The bookmark was not saved.');
+      throw new Error(id ? t('bookmarkNotUpdated') : t('bookmarkNotSaved'));
     }
 
     $('bookmark-id').value = bookmark.id;
-    button.textContent = 'Update';
+    button.textContent = t('updateButton');
     setVisible($('delete-bookmark'), true);
-    setBookmarkStatus('This page is already saved.');
-    setPageState('Saved');
+    setBookmarkStatus(t('alreadySaved'));
+    setPageState(t('saved'));
 
     if (!$('bookmark-folder').disabled) {
       state.loadedFolderValue = $('bookmark-folder').value;
@@ -441,9 +444,9 @@ async function saveBookmark() {
       api.storage.local.set({ lastFolder: state.lastFolderId }).catch(() => {});
     }
 
-    notify(id ? 'Bookmark updated.' : 'Bookmark saved.', 'success');
+    notify(id ? t('bookmarkUpdated') : t('bookmarkSaved'), 'success');
   } catch (error) {
-    notify(formatError(error), 'error');
+    notify(formatError(error, t), 'error');
   } finally {
     button.disabled = false;
   }
@@ -451,7 +454,7 @@ async function saveBookmark() {
 
 function requestDelete(id) {
   if (!id) {
-    notify('No bookmark selected.', 'error');
+    notify(t('noBookmarkSelected'), 'error');
     return;
   }
 
@@ -480,16 +483,16 @@ async function confirmDelete() {
       $('bookmark-id').value = '';
       $('bookmark-tags').value = '';
       $('bookmark-description').value = '';
-      $('save-bookmark').textContent = 'Save';
+      $('save-bookmark').textContent = t('saveButton');
       setVisible($('delete-bookmark'), false);
       setBookmarkStatus('');
       setPageState('');
       await loadCurrentTab();
     }
 
-    notify('Bookmark deleted.', 'success');
+    notify(t('bookmarkDeleted'), 'success');
   } catch (error) {
-    notify(formatError(error), 'error');
+    notify(formatError(error, t), 'error');
   }
 }
 
@@ -510,7 +513,7 @@ function activateTab(name) {
 
 async function runSearch() {
   if (!state.client) {
-    notify('Set the server URL in Settings.', 'error', 'Open settings', openOptions);
+    notify(t('setServerUrl'), 'error', t('openSettings'), openOptions);
     return;
   }
 
@@ -531,18 +534,18 @@ async function runSearch() {
 
 async function searchInto({ terms, tags, conjunction, page, target, emptyMessage }) {
   target.replaceChildren();
-  target.append(createMessage('Searching…'));
+  target.append(createMessage(t('searching')));
 
   try {
     const result = await state.client.getBookmarks({ terms, tags, conjunction, page, limit: 30 });
     if (result?.status === 'error') {
-      target.replaceChildren(createMessage(result.message || 'Server error.'));
+      target.replaceChildren(createMessage(result.message || t('serverError')));
       return;
     }
 
     renderResults(target, result?.data ?? [], emptyMessage);
   } catch (error) {
-    target.replaceChildren(createMessage(formatError(error)));
+    target.replaceChildren(createMessage(formatError(error, t)));
   }
 }
 
@@ -557,13 +560,13 @@ function renderResults(container, bookmarks, emptyMessage) {
   container.replaceChildren();
 
   if (!bookmarks.length) {
-    container.append(createMessage(emptyMessage || 'No bookmarks found.'));
+    container.append(createMessage(emptyMessage || t('noBookmarksFound')));
     return;
   }
 
   const heading = document.createElement('p');
   heading.className = 'results-heading';
-  heading.textContent = `${bookmarks.length} bookmark${bookmarks.length === 1 ? '' : 's'}`;
+  heading.textContent = bookmarks.length === 1 ? t('bookmarkCountOne') : t('bookmarkCountMany', [bookmarks.length]);
   container.append(heading);
 
   for (const bookmark of bookmarks) {
@@ -578,7 +581,7 @@ function renderResult(bookmark) {
 
   const title = document.createElement('a');
   title.className = 'result-title';
-  title.textContent = bookmark.title || bookmark.url || '(untitled)';
+  title.textContent = bookmark.title || bookmark.url || t('untitledBookmark');
   if (isSupportedUrl(bookmark.url)) {
     title.href = bookmark.url;
     title.target = '_blank';
@@ -621,7 +624,7 @@ function renderResult(bookmark) {
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'result-delete';
-  remove.textContent = 'Delete';
+  remove.textContent = t('deleteButton');
   remove.addEventListener('click', () => requestDelete(bookmark.id));
   meta.append(remove);
 
@@ -812,4 +815,4 @@ function applyMainTab() {
 
 init()
   .then(applyMainTab)
-  .catch((error) => notify(formatError(error), 'error'));
+  .catch((error) => notify(formatError(error, t), 'error'));

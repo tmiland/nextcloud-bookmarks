@@ -1,0 +1,389 @@
+{
+  "appName": {
+    "message": "Nextcloud Bookmarks"
+  },
+  "popupTitle": {
+    "message": "Nextcloud Bookmarks"
+  },
+  "optionsTitle": {
+    "message": "Nextcloud Bookmarks settings"
+  },
+  "bookmarkViews": {
+    "message": "Bookmark views"
+  },
+  "saveBookmarkTitle": {
+    "message": "Save bookmark"
+  },
+  "searchBookmarksTitle": {
+    "message": "Search bookmarks"
+  },
+  "settingsTitle": {
+    "message": "Settings"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "find": {
+    "message": "Find"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "currentPage": {
+    "message": "Current page"
+  },
+  "newBookmark": {
+    "message": "New bookmark"
+  },
+  "openPageToSave": {
+    "message": "Open a page to save it."
+  },
+  "currentPageFallback": {
+    "message": "Current page"
+  },
+  "saved": {
+    "message": "Saved"
+  },
+  "titleLabel": {
+    "message": "Title"
+  },
+  "folderLabel": {
+    "message": "Folder"
+  },
+  "foldersLabel": {
+    "message": "Folders"
+  },
+  "tagsLabel": {
+    "message": "Tags"
+  },
+  "noteLabel": {
+    "message": "Note"
+  },
+  "saveButton": {
+    "message": "Save"
+  },
+  "updateButton": {
+    "message": "Update"
+  },
+  "deleteButton": {
+    "message": "Delete"
+  },
+  "tagsPlaceholder": {
+    "message": "tag1, tag2"
+  },
+  "termsLabel": {
+    "message": "Terms"
+  },
+  "termsPlaceholder": {
+    "message": "term1, term2"
+  },
+  "matchLabel": {
+    "message": "Match"
+  },
+  "matchAll": {
+    "message": "all"
+  },
+  "matchAny": {
+    "message": "any"
+  },
+  "allResults": {
+    "message": "All results"
+  },
+  "searchButton": {
+    "message": "Search"
+  },
+  "deleteConfirm": {
+    "message": "Delete this bookmark?"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "openNextcloud": {
+    "message": "Open Nextcloud"
+  },
+  "unofficialClient": {
+    "message": "Unofficial client"
+  },
+  "source": {
+    "message": "Source"
+  },
+  "rootNoFolder": {
+    "message": "Root (no folder)"
+  },
+  "root": {
+    "message": "Root"
+  },
+  "savedInRoot": {
+    "message": "Saved in: Root"
+  },
+  "savedInFolder": {
+    "message": "Saved in: $1"
+  },
+  "savedInFolders": {
+    "message": "Saved in $1 folders; move it in Nextcloud."
+  },
+  "savedInFolderUnavailable": {
+    "message": "Saved in: $1 (folder list unavailable)"
+  },
+  "savedInRootAnd": {
+    "message": " and Root"
+  },
+  "folderFallback": {
+    "message": "Folder $1"
+  },
+  "alreadySaved": {
+    "message": "This page is already saved."
+  },
+  "urlEmpty": {
+    "message": "The URL is empty."
+  },
+  "bookmarkUpdated": {
+    "message": "Bookmark updated."
+  },
+  "bookmarkSaved": {
+    "message": "Bookmark saved."
+  },
+  "bookmarkDeleted": {
+    "message": "Bookmark deleted."
+  },
+  "noBookmarkSelected": {
+    "message": "No bookmark selected."
+  },
+  "searching": {
+    "message": "Searching…"
+  },
+  "noBookmarksFound": {
+    "message": "No bookmarks found."
+  },
+  "bookmarkCountOne": {
+    "message": "1 bookmark"
+  },
+  "bookmarkCountMany": {
+    "message": "$1 bookmarks"
+  },
+  "serverError": {
+    "message": "Server error."
+  },
+  "setServerUrl": {
+    "message": "Set your Nextcloud server URL in Settings."
+  },
+  "accessRequired": {
+    "message": "Access to your Nextcloud server is required."
+  },
+  "bookmarkNotUpdated": {
+    "message": "The bookmark was not updated."
+  },
+  "bookmarkNotSaved": {
+    "message": "The bookmark was not saved."
+  },
+  "unknownError": {
+    "message": "Unknown error"
+  },
+  "errorAuth": {
+    "message": "Authentication failed. Check your username and app password."
+  },
+  "errorForbidden": {
+    "message": "The server denied access."
+  },
+  "errorNotFound": {
+    "message": "Bookmarks API not found. Is the Nextcloud Bookmarks app installed?"
+  },
+  "errorServerWithDetail": {
+    "message": "Server error: $1"
+  },
+  "errorServerStatus": {
+    "message": "Server error (HTTP $1)."
+  },
+  "errorNetwork": {
+    "message": "Could not reach the Nextcloud server. Check the URL and your connection."
+  },
+  "selfHostedBookmarks": {
+    "message": "Self-hosted bookmarks"
+  },
+  "unofficialFirefoxClient": {
+    "message": "Unofficial Firefox client"
+  },
+  "connectionNav": {
+    "message": "Connection"
+  },
+  "importNav": {
+    "message": "Import"
+  },
+  "serverMeta": {
+    "message": "Server"
+  },
+  "notConfigured": {
+    "message": "Not configured"
+  },
+  "unofficial": {
+    "message": "Unofficial"
+  },
+  "sponsor": {
+    "message": "Sponsor"
+  },
+  "setup": {
+    "message": "Setup"
+  },
+  "connectShelf": {
+    "message": "Connect your bookmark shelf."
+  },
+  "lede": {
+    "message": "Point the extension at your Nextcloud, use a revocable app password, and keep your bookmarks in the folders you already use."
+  },
+  "connectionSection": {
+    "message": "01 · Connection"
+  },
+  "nextcloudAccount": {
+    "message": "Nextcloud account"
+  },
+  "serverUrlLabel": {
+    "message": "Server URL"
+  },
+  "serverUrlPlaceholder": {
+    "message": "https://cloud.example.com"
+  },
+  "usernameLabel": {
+    "message": "Username"
+  },
+  "appPasswordLabel": {
+    "message": "App password"
+  },
+  "appPasswordHint": {
+    "message": "Use a revocable Nextcloud app password (Settings → Security → App passwords), especially with two-factor authentication. It is stored locally in Firefox."
+  },
+  "startWith": {
+    "message": "Start with"
+  },
+  "startWithAdd": {
+    "message": "Bookmark form"
+  },
+  "startWithSearch": {
+    "message": "Search"
+  },
+  "grantServerAccess": {
+    "message": "Grant server access"
+  },
+  "saveSettings": {
+    "message": "Save settings"
+  },
+  "importSection": {
+    "message": "02 · Import"
+  },
+  "importHeading": {
+    "message": "Bring Firefox bookmarks over"
+  },
+  "importHint": {
+    "message": "Manual one-way import into Nextcloud. Nothing is changed or deleted in Firefox."
+  },
+  "importPermission": {
+    "message": "Allow Firefox bookmarks access to choose what to import."
+  },
+  "allowBookmarks": {
+    "message": "Allow bookmarks access"
+  },
+  "firefoxFolder": {
+    "message": "Firefox folder"
+  },
+  "nextcloudFolder": {
+    "message": "Nextcloud folder"
+  },
+  "importExistingHint": {
+    "message": "Existing URLs are skipped. Firefox folders are flattened into the selected Nextcloud folder. This does not create Nextcloud folders."
+  },
+  "preview": {
+    "message": "Preview"
+  },
+  "importButton": {
+    "message": "Import"
+  },
+  "chooseFirefoxFolder": {
+    "message": "Choose a Firefox folder, preview, then import."
+  },
+  "notAffiliated": {
+    "message": "Unofficial. Not affiliated with Nextcloud."
+  },
+  "mitLicensed": {
+    "message": "MIT licensed."
+  },
+  "accessGranted": {
+    "message": "Access to $1 is granted."
+  },
+  "accessNeeded": {
+    "message": "This extension needs access to $1 to read and save bookmarks."
+  },
+  "enterServerUrl": {
+    "message": "Enter your Nextcloud server URL."
+  },
+  "invalidServerUrl": {
+    "message": "The server URL is not valid."
+  },
+  "couldNotSaveSettings": {
+    "message": "Could not save the settings."
+  },
+  "settingsSaved": {
+    "message": "Settings saved."
+  },
+  "settingsSavedNoAccess": {
+    "message": "Settings saved, but server access was not granted."
+  },
+  "saveServerFirst": {
+    "message": "Save the server URL first."
+  },
+  "serverAccessGranted": {
+    "message": "Server access granted."
+  },
+  "serverAccessNotGranted": {
+    "message": "Server access was not granted."
+  },
+  "saveSettingsAndGrant": {
+    "message": "Save the settings and grant access to your Nextcloud server first."
+  },
+  "bookmarksAccessNotGranted": {
+    "message": "Firefox bookmarks access was not granted."
+  },
+  "allBookmarks": {
+    "message": "All bookmarks"
+  },
+  "untitledFolder": {
+    "message": "(untitled folder)"
+  },
+  "couldNotLoadFolders": {
+    "message": "Could not load Nextcloud folders: $1"
+  },
+  "couldNotReadBookmarks": {
+    "message": "Could not read Firefox bookmarks: $1"
+  },
+  "saveSettingsFirst": {
+    "message": "Save the settings first."
+  },
+  "previewFound": {
+    "message": "Found $1 bookmarks: $2 new, $3 already in Nextcloud, $4 unsupported."
+  },
+  "previewFailed": {
+    "message": "Preview failed: $1"
+  },
+  "importingProgress": {
+    "message": "Importing $1 of $2…"
+  },
+  "importCancelled": {
+    "message": "Import cancelled. "
+  },
+  "importSummary": {
+    "message": "Imported $1, skipped $2, failed $3."
+  },
+  "cancelling": {
+    "message": "Cancelling…"
+  },
+  "noNewBookmarks": {
+    "message": "No new bookmarks."
+  },
+  "commandSavePage": {
+    "message": "Save the current page to Nextcloud"
+  },
+  "untitledBookmark": {
+    "message": "(untitled)"
+  },
+  "openSettings": {
+    "message": "Open settings"
+  }
+}

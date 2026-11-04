@@ -166,32 +166,45 @@ export function formatDate(unixSeconds) {
   return date.toISOString().slice(0, 16).replace('T', ' ');
 }
 
-export function formatError(error) {
+export function formatError(error, translate = (key, substitutions) => {
+  const fallback = {
+    unknownError: 'Unknown error',
+    errorAuth: 'Authentication failed. Check your username and app password.',
+    errorForbidden: 'The server denied access.',
+    errorNotFound: 'Bookmarks API not found. Is the Nextcloud Bookmarks app installed?',
+    errorServerWithDetail: 'Server error: $1',
+    errorServerStatus: 'Server error (HTTP $1).',
+    errorNetwork: 'Could not reach the Nextcloud server. Check the URL and your connection.'
+  };
+  const message = fallback[key] ?? key;
+  const values = Array.isArray(substitutions) ? substitutions : [substitutions];
+  return values.reduce((result, value, index) => result.split(`$${index + 1}`).join(String(value)), message);
+}) {
   if (!error) {
-    return 'Unknown error';
+    return translate('unknownError');
   }
 
   if (error.status === 401) {
-    return 'Authentication failed. Check your username and app password.';
+    return translate('errorAuth');
   }
   if (error.status === 403) {
-    return 'The server denied access.';
+    return translate('errorForbidden');
   }
   if (error.status === 404) {
-    return 'Bookmarks API not found. Is the Nextcloud Bookmarks app installed?';
+    return translate('errorNotFound');
   }
   if (error.status) {
     const detail = error.data?.message ?? error.data?.data;
     if (detail) {
       const text = Array.isArray(detail) ? detail.join(' ') : String(detail);
-      return `Server error: ${text}`;
+      return translate('errorServerWithDetail', [text]);
     }
-    return `Server error (HTTP ${error.status}).`;
+    return translate('errorServerStatus', [error.status]);
   }
 
   if (error.message) {
     return error.message;
   }
 
-  return 'Could not reach the Nextcloud server. Check the URL and your connection.';
+  return translate('errorNetwork');
 }

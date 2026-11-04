@@ -1,0 +1,389 @@
+{
+  "appName": {
+    "message": "Nextcloud Bookmarks"
+  },
+  "popupTitle": {
+    "message": "Nextcloud Bookmarks"
+  },
+  "optionsTitle": {
+    "message": "Innstillinger for Nextcloud Bookmarks"
+  },
+  "bookmarkViews": {
+    "message": "Bokmerkevisninger"
+  },
+  "saveBookmarkTitle": {
+    "message": "Lagre bokmerke"
+  },
+  "searchBookmarksTitle": {
+    "message": "Søk i bokmerker"
+  },
+  "settingsTitle": {
+    "message": "Innstillinger"
+  },
+  "save": {
+    "message": "Lagre"
+  },
+  "find": {
+    "message": "Finn"
+  },
+  "settings": {
+    "message": "Innstillinger"
+  },
+  "currentPage": {
+    "message": "Gjeldende side"
+  },
+  "newBookmark": {
+    "message": "Nytt bokmerke"
+  },
+  "openPageToSave": {
+    "message": "Åpne en side for å lagre den."
+  },
+  "currentPageFallback": {
+    "message": "Gjeldende side"
+  },
+  "saved": {
+    "message": "Lagret"
+  },
+  "titleLabel": {
+    "message": "Tittel"
+  },
+  "folderLabel": {
+    "message": "Mappe"
+  },
+  "foldersLabel": {
+    "message": "Mapper"
+  },
+  "tagsLabel": {
+    "message": "Stikkord"
+  },
+  "noteLabel": {
+    "message": "Notat"
+  },
+  "saveButton": {
+    "message": "Lagre"
+  },
+  "updateButton": {
+    "message": "Oppdater"
+  },
+  "deleteButton": {
+    "message": "Slett"
+  },
+  "tagsPlaceholder": {
+    "message": "stikkord1, stikkord2"
+  },
+  "termsLabel": {
+    "message": "Ord"
+  },
+  "termsPlaceholder": {
+    "message": "ord1, ord2"
+  },
+  "matchLabel": {
+    "message": "Match"
+  },
+  "matchAll": {
+    "message": "alle"
+  },
+  "matchAny": {
+    "message": "noen"
+  },
+  "allResults": {
+    "message": "Alle resultater"
+  },
+  "searchButton": {
+    "message": "Søk"
+  },
+  "deleteConfirm": {
+    "message": "Slette dette bokmerket?"
+  },
+  "cancel": {
+    "message": "Avbryt"
+  },
+  "openNextcloud": {
+    "message": "Åpne Nextcloud"
+  },
+  "unofficialClient": {
+    "message": "Uoffisiell klient"
+  },
+  "source": {
+    "message": "Kilde"
+  },
+  "rootNoFolder": {
+    "message": "Rot (ingen mappe)"
+  },
+  "root": {
+    "message": "Rot"
+  },
+  "savedInRoot": {
+    "message": "Lagret i: Rot"
+  },
+  "savedInFolder": {
+    "message": "Lagret i: $1"
+  },
+  "savedInFolders": {
+    "message": "Lagret i $1 mapper; flytt det i Nextcloud."
+  },
+  "savedInFolderUnavailable": {
+    "message": "Lagret i: $1 (mappelisten er utilgjengelig)"
+  },
+  "savedInRootAnd": {
+    "message": " og Rot"
+  },
+  "folderFallback": {
+    "message": "Mappe $1"
+  },
+  "alreadySaved": {
+    "message": "Denne siden er allerede lagret."
+  },
+  "urlEmpty": {
+    "message": "URL-en er tom."
+  },
+  "bookmarkUpdated": {
+    "message": "Bokmerket ble oppdatert."
+  },
+  "bookmarkSaved": {
+    "message": "Bokmerket ble lagret."
+  },
+  "bookmarkDeleted": {
+    "message": "Bokmerket ble slettet."
+  },
+  "noBookmarkSelected": {
+    "message": "Ingen bokmerke valgt."
+  },
+  "searching": {
+    "message": "Søker…"
+  },
+  "noBookmarksFound": {
+    "message": "Ingen bokmerker funnet."
+  },
+  "bookmarkCountOne": {
+    "message": "1 bokmerke"
+  },
+  "bookmarkCountMany": {
+    "message": "$1 bokmerker"
+  },
+  "serverError": {
+    "message": "Serverfeil."
+  },
+  "setServerUrl": {
+    "message": "Angi Nextcloud-serveradressen i Innstillinger."
+  },
+  "accessRequired": {
+    "message": "Tilgang til Nextcloud-serveren kreves."
+  },
+  "bookmarkNotUpdated": {
+    "message": "Bokmerket ble ikke oppdatert."
+  },
+  "bookmarkNotSaved": {
+    "message": "Bokmerket ble ikke lagret."
+  },
+  "unknownError": {
+    "message": "Ukjent feil"
+  },
+  "errorAuth": {
+    "message": "Autentisering mislyktes. Kontroller brukernavn og app-passord."
+  },
+  "errorForbidden": {
+    "message": "Serveren avviste tilgangen."
+  },
+  "errorNotFound": {
+    "message": "Bookmarks-API-et ble ikke funnet. Er Nextcloud Bookmarks-appen installert?"
+  },
+  "errorServerWithDetail": {
+    "message": "Serverfeil: $1"
+  },
+  "errorServerStatus": {
+    "message": "Serverfeil (HTTP $1)."
+  },
+  "errorNetwork": {
+    "message": "Kunne ikke nå Nextcloud-serveren. Kontroller URL-en og tilkoblingen."
+  },
+  "selfHostedBookmarks": {
+    "message": "Selvhostede bokmerker"
+  },
+  "unofficialFirefoxClient": {
+    "message": "Uoffisiell Firefox-klient"
+  },
+  "connectionNav": {
+    "message": "Tilkobling"
+  },
+  "importNav": {
+    "message": "Import"
+  },
+  "serverMeta": {
+    "message": "Server"
+  },
+  "notConfigured": {
+    "message": "Ikke konfigurert"
+  },
+  "unofficial": {
+    "message": "Uoffisiell"
+  },
+  "sponsor": {
+    "message": "Spons"
+  },
+  "setup": {
+    "message": "Oppsett"
+  },
+  "connectShelf": {
+    "message": "Koble til bokmerkene dine."
+  },
+  "lede": {
+    "message": "Pek utvidelsen mot Nextcloud, bruk et tilbakekallbart app-passord, og behold bokmerkene i mappene du allerede bruker."
+  },
+  "connectionSection": {
+    "message": "01 · Tilkobling"
+  },
+  "nextcloudAccount": {
+    "message": "Nextcloud-konto"
+  },
+  "serverUrlLabel": {
+    "message": "Serveradresse"
+  },
+  "serverUrlPlaceholder": {
+    "message": "https://cloud.example.com"
+  },
+  "usernameLabel": {
+    "message": "Brukernavn"
+  },
+  "appPasswordLabel": {
+    "message": "App-passord"
+  },
+  "appPasswordHint": {
+    "message": "Bruk et tilbakekallbart Nextcloud-app-passord (Innstillinger → Sikkerhet → App-passord), spesielt med tofaktorautentisering. Det lagres lokalt i Firefox."
+  },
+  "startWith": {
+    "message": "Start med"
+  },
+  "startWithAdd": {
+    "message": "Bokmerkeskjema"
+  },
+  "startWithSearch": {
+    "message": "Søk"
+  },
+  "grantServerAccess": {
+    "message": "Gi servertilgang"
+  },
+  "saveSettings": {
+    "message": "Lagre innstillinger"
+  },
+  "importSection": {
+    "message": "02 · Import"
+  },
+  "importHeading": {
+    "message": "Flytt Firefox-bokmerker over"
+  },
+  "importHint": {
+    "message": "Manuell enveis import til Nextcloud. Ingenting endres eller slettes i Firefox."
+  },
+  "importPermission": {
+    "message": "Tillat tilgang til Firefox-bokmerker for å velge hva som skal importeres."
+  },
+  "allowBookmarks": {
+    "message": "Tillat bokmerketilgang"
+  },
+  "firefoxFolder": {
+    "message": "Firefox-mappe"
+  },
+  "nextcloudFolder": {
+    "message": "Nextcloud-mappe"
+  },
+  "importExistingHint": {
+    "message": "Eksisterende URL-er hoppes over. Firefox-mapper flates ut i den valgte Nextcloud-mappen. Dette oppretter ikke Nextcloud-mapper."
+  },
+  "preview": {
+    "message": "Forhåndsvis"
+  },
+  "importButton": {
+    "message": "Importer"
+  },
+  "chooseFirefoxFolder": {
+    "message": "Velg en Firefox-mappe, forhåndsvis, og importer."
+  },
+  "notAffiliated": {
+    "message": "Uoffisiell. Ikke tilknyttet Nextcloud."
+  },
+  "mitLicensed": {
+    "message": "MIT-lisensiert."
+  },
+  "accessGranted": {
+    "message": "Tilgang til $1 er gitt."
+  },
+  "accessNeeded": {
+    "message": "Denne utvidelsen trenger tilgang til $1 for å lese og lagre bokmerker."
+  },
+  "enterServerUrl": {
+    "message": "Angi Nextcloud-serveradressen."
+  },
+  "invalidServerUrl": {
+    "message": "Serveradressen er ikke gyldig."
+  },
+  "couldNotSaveSettings": {
+    "message": "Kunne ikke lagre innstillingene."
+  },
+  "settingsSaved": {
+    "message": "Innstillingene er lagret."
+  },
+  "settingsSavedNoAccess": {
+    "message": "Innstillingene er lagret, men servertilgang ble ikke gitt."
+  },
+  "saveServerFirst": {
+    "message": "Lagre serveradressen først."
+  },
+  "serverAccessGranted": {
+    "message": "Servertilgang gitt."
+  },
+  "serverAccessNotGranted": {
+    "message": "Servertilgang ble ikke gitt."
+  },
+  "saveSettingsAndGrant": {
+    "message": "Lagre innstillingene og gi tilgang til Nextcloud-serveren først."
+  },
+  "bookmarksAccessNotGranted": {
+    "message": "Tilgang til Firefox-bokmerker ble ikke gitt."
+  },
+  "allBookmarks": {
+    "message": "Alle bokmerker"
+  },
+  "untitledFolder": {
+    "message": "(mappe uten navn)"
+  },
+  "couldNotLoadFolders": {
+    "message": "Kunne ikke laste Nextcloud-mapper: $1"
+  },
+  "couldNotReadBookmarks": {
+    "message": "Kunne ikke lese Firefox-bokmerker: $1"
+  },
+  "saveSettingsFirst": {
+    "message": "Lagre innstillingene først."
+  },
+  "previewFound": {
+    "message": "Fant $1 bokmerker: $2 nye, $3 allerede i Nextcloud, $4 ikke støttet."
+  },
+  "previewFailed": {
+    "message": "Forhåndsvisning mislyktes: $1"
+  },
+  "importingProgress": {
+    "message": "Importerer $1 av $2…"
+  },
+  "importCancelled": {
+    "message": "Importen ble avbrutt. "
+  },
+  "importSummary": {
+    "message": "Importerte $1, hoppet over $2, mislyktes $3."
+  },
+  "cancelling": {
+    "message": "Avbryter…"
+  },
+  "noNewBookmarks": {
+    "message": "Ingen nye bokmerker."
+  },
+  "commandSavePage": {
+    "message": "Lagre gjeldende side til Nextcloud"
+  },
+  "untitledBookmark": {
+    "message": "(uten tittel)"
+  },
+  "openSettings": {
+    "message": "Åpne innstillinger"
+  }
+}
