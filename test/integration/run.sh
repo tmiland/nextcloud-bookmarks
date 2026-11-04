@@ -82,7 +82,7 @@ user_pref("devtools.debugger.remote-enabled", true);
 user_pref("devtools.chrome.enabled", true);
 EOF
 
-"$FIREFOX_BIN" --headless --marionette --remote-allow-system-access --profile "$SCRATCH/profile" --no-remote about:blank >"$SCRATCH/firefox.log" 2>&1 &
+MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 "$FIREFOX_BIN" --headless --marionette --remote-allow-system-access --profile "$SCRATCH/profile" --no-remote about:blank >"$SCRATCH/firefox.log" 2>&1 &
 FIREFOX_PID=$!
 
 EXT_XPI="$SCRATCH/extension.xpi" \

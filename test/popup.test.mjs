@@ -184,7 +184,7 @@ async function loadPopup({
     await store.replaceAll(account, index, indexSyncedAt);
   }
 
-  await import(`../extension/src/popup.mjs?dom=${moduleCounter}`);
+  const module = await import(`../extension/src/popup.mjs?dom=${moduleCounter}`);
   await waitFor(() => dom.window.document.getElementById('bookmark-title'));
 
   const cleanup = () => {
@@ -206,7 +206,7 @@ async function loadPopup({
     }
   };
 
-  return { dom, browser, cleanup, account };
+  return { dom, browser, cleanup, account, state: module.state };
 }
 
 function optionValues(select) {
@@ -298,10 +298,24 @@ test('searches the local index, pages results, and edits and opens a result', as
   try {
     const document = popup.dom.window.document;
     await waitFor(() => document.body.dataset.indexReady === '1');
+    assert.equal(popup.state.indexedBookmarks.length, 35);
     document.getElementById('search-sort').value = 'title';
 
     document.getElementById('search-button').click();
-    await waitFor(() => document.querySelectorAll('#search-results .result').length === 30);
+    try {
+      await waitFor(() => document.querySelectorAll('#search-results .result').length === 30);
+    } catch (error) {
+      console.log('DEBUG search', {
+        indexed: popup.state.indexedBookmarks.length,
+        syncedAt: popup.state.indexSyncedAt,
+        ready: popup.state.indexReady,
+        lastSearch: popup.state.lastSearch,
+        source: document.body.dataset.searchSource,
+        cards: document.querySelectorAll('#search-results .result').length,
+        notification: document.getElementById('notification').textContent
+      });
+      throw error;
+    }
     assert.equal(document.body.dataset.searchSource, 'local');
     assert.equal(document.getElementById('load-more').hidden, false);
 

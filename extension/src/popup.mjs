@@ -1231,3 +1231,5 @@ function applyMainTab() {
 init()
   .then(applyMainTab)
   .catch((error) => notify(formatError(error, t), 'error'));
+
+export { state };
