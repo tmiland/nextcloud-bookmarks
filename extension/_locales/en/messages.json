@@ -571,5 +571,8 @@
   },
   "extensionDescription": {
     "message": "Unofficial Firefox client for the Nextcloud Bookmarks app: save, search, organize, and import bookmarks."
+  },
+  "donate": {
+    "message": "Donate"
   }
 }

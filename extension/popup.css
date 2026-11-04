@@ -621,6 +621,10 @@ textarea {
   margin-left: auto;
 }
 
+.status-donate {
+  color: var(--accent-text);
+}
+
 .status-dot {
   width: 4px;
   height: 4px;

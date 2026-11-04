@@ -613,3 +613,14 @@ test('shows the current page and a clear error when host permission is denied', 
     popup.cleanup();
   }
 });
+
+test('shows a donate link to GitHub Sponsors', async () => {
+  const popup = await loadPopup();
+  try {
+    const link = popup.dom.window.document.querySelector('a.status-donate');
+    assert.equal(link.href, 'https://github.com/sponsors/tmiland');
+    assert.equal(link.textContent, 'Donate');
+  } finally {
+    popup.cleanup();
+  }
+});

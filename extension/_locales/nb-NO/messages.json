@@ -571,5 +571,8 @@
   },
   "extensionDescription": {
     "message": "Uoffisiell Firefox-klient for Nextcloud Bookmarks: lagre, søk, organiser og importer bokmerker."
+  },
+  "donate": {
+    "message": "Doner"
   }
 }
