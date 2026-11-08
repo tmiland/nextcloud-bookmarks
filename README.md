@@ -14,7 +14,7 @@ Firefox bookmarks manually.
 > Bookmarks are separate open-source projects. This extension is an independent
 > client for the public Bookmarks REST API.
 
-**Status:** v1.0.0 · Firefox MV3 · AMO listed submission.
+**Status:** v1.0.0 · Firefox MV3 · [Published on AMO](https://addons.mozilla.org/firefox/addon/nextcloud-bookmarks/).
 
 ## Screenshots
 
@@ -74,8 +74,9 @@ server. Offline mode is read-only search from the local index.
 
 ### AMO
 
-The add-on has not been submitted to AMO yet. AMO-listed builds update through
-AMO automatically; the manifest intentionally has **no `update_url`**.
+Install from [addons.mozilla.org/firefox/addon/nextcloud-bookmarks](https://addons.mozilla.org/firefox/addon/nextcloud-bookmarks/).
+AMO-listed builds update through AMO automatically; the manifest intentionally
+has **no `update_url`**.
 
 ## Setup
 
